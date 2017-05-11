@@ -1,135 +1,132 @@
----
-layout: author_layout
----
-<div class="container">
-    <div class="row-center">
-        <div class="col-md-7">
-            {% if site.data.author.workHistory %}
-                <h3 class="title with-icon"><span class="glyphicon glyphicon-plane cat-title"></span>Work History</h3>
-                <ul class="timeline">
-                    {% for work in site.data.author.workHistory %}
-                        <li class="timeline-inverted">
-                            {% if work.started %}
-                                <div class="timeline-badge info">{{ work.started }}</div>
-                            {% endif %}
-                            <div class="timeline-panel grid-block">
-                                <div class="timeline-heading">
-                                    {% if work.company %}
-                                        <h4 class="timeline-title">{{ work.company }} </h4>
-                                    {% endif %}
-                                    <p>
-                                        <small class="text-muted">
-                                            {% if work.title %}
-                                                {{ work.title }}
-                                            {% endif %}
-                                        </small>
-                                    </p>
-                                    <p>
-                                        <small class="text-muted">
-                                            {% if work.duration %}
-                                                <i class="fa fa-calendar"></i> {{ work.duration }} |
-                                            {% endif %}
-                                            {% if work.location %}
-                                                <i class="fa fa-map-marker"></i>  {{ work.location }}
-                                            {% endif %}
-                                        </small>
-                                    </p>
-                                </div>
-                                <div class="timeline-body">
-                                    {% if work.description %}
-                                        <p>{{ work.description }}</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-            {% if site.data.author.educationHistory %}
-                <h3 class="title with-icon"><span class="fa fa-book cat-title"></span>Education History</h3>
-                <ul class="timeline">
-                    {% for education in site.data.author.educationHistory %}
-                        <li class="timeline-inverted">
-                            {% if education.started %}
-                                <div class="timeline-badge info">{{ education.started }}</div>
-                            {% endif %}
-                            <div class="timeline-panel grid-block">
-                                <div class="timeline-heading">
-                                    {% if education.organization %}
-                                        <h4 class="timeline-title">{{ education.organization }}</h4>
-                                    {% endif %}
-                                    <p>
-                                        <small class="text-muted">
-                                            {% if education.degree %}
-                                                {{ education.degree }}
-                                            {% endif %}
-                                            {% if education.major %}
-                                                , {{ education.major }}
-                                            {% endif %}
-                                        </small>
-                                    </p>
-                                    {% if education.duration %}
-                                        <p>
-                                            <small class="text-muted"><i class="fa fa-calendar"></i> {{ education.duration }}
-                                            </small>
-                                        </p>
-                                    {% endif %}
-                                </div>
-                                <div class="timeline-body">
-                                    {% if education.description %}
-                                        <p>{{ education.description }}</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </div>
-        <div class="col-md-5">
-            {% if site.data.author.programmingSkills %}
-                <h3 class="title with-icon"><span class="fa fa-code cat-title"></span> Programming Skills</h3>
-                <div class="grid-block">
-                    <ul class="list-unstyled list-skills">
-                        {% for programmingSkill in site.data.author.programmingSkills %}
-                            <li>
-                                {% if programmingSkill.name %}
-                                    <span class="caption-skill">{{ programmingSkill.name }}</span>
-                                {% endif %}
-                                {% if programmingSkill.percentage %}
-                                    <div class="progress">
-                                        <div class="progress-bar" style="width: {{ programmingSkill.percentage }}">
-                                            <span>{{ programmingSkill.percentage }} </span>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
-            {% if site.data.author.languages %}
-                <div class="deviter"></div>
-                <h3 class="title with-icon"><span class="fa fa-globe cat-title"></span> Language Skills</h3>
-                <div class="grid-block">
-                    <ul class="list-unstyled list-strip">
-                        {% for language in site.data.author.languages %}
-                            {% if language.name %}
-                                {% if language.proficiency %}
-                                    <li>
-                                        <i class="fa fa-check"></i> <span class="badge badge-green badge-right-float">{{ language.proficiency }}</span>{{ language.name }}
-                                    </li>
-                                {% endif %}
-                            {% endif %}
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
-           <!-- <div class="deviter"></div>
-            <h3 class="title with-icon"><span class="fa fa-location-arrow cat-title"></span> Location</h3>
-            <div class="grid-block">
-                <img src="http://restapi.amap.com/v3/staticmap?location=121.4037323,31.19782533&amp;zoom=15&amp;size=500*250&amp;markers=mid,,A:121.4037323,31.19782533&amp;key=4fbf0c0dfa89f726a84101e3a5d1bc50" style="border:0" frameborder="0" width="100%" height="100%">
-            </div> -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Me</title>
+  <meta name="description" content="喜欢C语言，喜欢Unix以及Unix的文化。">
+
+  <link rel="canonical" href="http://0.0.0.0:4000/2017/05/12/about.html">
+
+  <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="/assets/css/icard_resume.css"> -->
+  <link rel="stylesheet" href="/assets/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/assets/css/blog.css" >
+  <link rel="stylesheet" href="/assets/css/syntax.css">
+
+  <link rel="icon" type="image/png" href="/assets/img/avatar.JPG">
+
+  <!-- Google fonts -->
+  <link rel='stylesheet' href='//fonts.googleapis.com/css?family=Open+Sans:300' type='text/css'>
+  <link rel='stylesheet' href='//fonts.googleapis.com/css?family=Source+Sans+Pro' type='text/css'>
+
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+  <script src="assets/js/html5shiv.min.js"></script>
+  <script src="assets/js/respond.min.js"></script>
+  <![endif]-->
+
+</head>
+
+    <body>
+        <header class="bloghead">
+    <dev class="authorheader">
+        <a href="/">
+            <img alt="My Avatar" src="/assets/img/avatar.JPG"/>
+        </a>
+        <dev class="blogtitle">
+            <h1><a href="/">WuHang Du</a></h1>
+            <h5> 在搬砖中迷失自我，在搬砖中找到自我! </h5>
+        </dev>
+    </dev>
+
+    <nav class="menu" role="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li>|</li>
+            <li><a href="/menu.html">Menu</a></li>
+            <li>|</li>
+            <li><a target="_blank" href="https://github.com/wuhang-du">Github</a></li>
+            <li>|</li>
+            <li><a target="_blank" href="/about.html"> About Me</a></li>
+        </ul>
+    </nav>
+</header>
+
+
+        <main class="blogmain">
+            <header>
+                <h1 class="article-title">Me</h1>
+            </header>
+            <p>喜欢C语言，喜欢Unix以及Unix的文化。</p>
+
+<!--break-->
+
+<h4 id="done">Done</h4>
+
+<ul>
+  <li>
+    <p>2010-2014 北京邮电大学 通信工程</p>
+  </li>
+  <li>
+    <p>2014-2017 北京邮电大学 电子与通信工程</p>
+  </li>
+  <li>
+    <p>第一份工作</p>
+  </li>
+</ul>
+
+<h4 id="doing">Doing</h4>
+
+<ul>
+  <li>
+    <p>github第一星</p>
+  </li>
+  <li>
+    <p>学习nginx(30%)</p>
+  </li>
+  <li>
+    <p>学习redis(10%)</p>
+  </li>
+  <li>
+    <p>学习openresty(5%)</p>
+  </li>
+</ul>
+
+<p>希望自己能越来越厉害。</p>
+
+<p>2017-5-12 0:38 于北京</p>
+
+
+        </main>
+
+        <div class="footer-copyright">
+    <div class="container-fluid">
+        <div class="row-fluid">
+            <div class="col-md-12">
+                Copyright &copy; 2017 duwh - All rights reserved.
+            </div>
         </div>
     </div>
 </div>
+<script type="text/javascript" src="/assets/js/jquery.min.js"></script>
+<script type="text/javascript" src="/assets/js/bootstrap.min.js"></script>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-74743250-2', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+    </body>
+
+</html>

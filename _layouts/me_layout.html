@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    {% include head.html %}
+    <body>
+        {% include blog_header.html %}
+
+        <main class="blogmain">
+            <header>
+                <h1 class="article-title">{{ page.title }}</h1>
+            </header>
+            {{ content }}
+        </main>
+
+        {% include footer.html %}
+    </body>
+
+</html>

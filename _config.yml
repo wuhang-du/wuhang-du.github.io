@@ -7,7 +7,7 @@ url: https://wuhang-du.github.io
 rss_url:
 
 # Build settings
-
+excerpt_separator: "<!--break-->"
 highlight: true
 #highlighter: rouge
 
