@@ -1,7 +1,7 @@
 ---
 layout: post_layout
 title: Go：使用channel共享内存
-time: 2017年6月3日 星期六
+time: 2017年06月03日 星期六
 location: 北京
 pulished: true
 ---
