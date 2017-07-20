@@ -97,7 +97,25 @@ Unlock g.
 **索引交集**：是mongo提供的一种机制，可以将单个索引联合起来使用。例如2提到的索引升序降序，如果使用
 两个单个的(a:1),(b:1)就可以支持4种组合了。
 
-  不过，我认为索引交集的缺点在于有sort时可能会导致查询结果在内存中排序.而复合索引可以避免这一点。
+
+索引交集与复合索引的比较：复合索引必须注重：fileds的顺序，以及fileds 的顺序逆序的组合。然而，索引交集的使用有一个限制，即如果sort部分，需要使用的索引与query不相关的索引，则无法使用索引交集。
+
+```go
+{ qty: 1 }
+{ status: 1, ord_date: -1 }
+{ status: 1 }
+{ ord_date: -1 }
+
+{ qty: 1 }
+{ status: 1, ord_date: -1 }
+{ status: 1 }
+{ ord_date: -1 }
+no: 不使用索引交集
+no: 没用上索引交集, compound index也不支持
+db.orders.find({qty:{$gt:10}}).sort( { status: 1 } )
+yes: 用上了compound index, 没用索引交集
+db.orders.find({qty:{$gt:10}, status: "A" } ).sort( { ord_date: -1 } )
+```
 
   **结论就是需要具体问题具体对待，没有技术银弹**。
 
@@ -111,15 +129,36 @@ db.push_log.find({
        $or:[{'msg.recvId':{$in:['wh90013524']}},{'msg.userId':'wh90013524'}]
        }).limit(50).sort({'msg.sendTime':-1}).explain(2)
 
-刚开始，我使用了msgtype,msg.sendTime,msg.userId的组合，这是不用内存排序的复合索引，然而，
-因为数据量比较大，前面的type,sendtime几乎是全集了，所以查询一直维持在1.7s.
+对于这个例子，两种思路：
+第一种：重写查询语句，将or提到顶层，这样的话，就相当于两个不同的查询。
 
-后来一直尝试，分别建立了msg.msgtype,msg.recvId，msg.userId三个单索引，奇迹般的降到了1ms.
-因为无意中触发了索引交集，这个查询userId和recvId字段才是减少数据量的关键。explain之后，
-发现了complex index才知道了索引交集。
+db.push_log.find({
+	$or:[{
+        'msg.msgType':{$in:['chat','g_card']},
+		'msg.recvId':{$in:['wh90013524']}
+        'msg.sendTime':{$gt:1496654230780.0,$nin:['']},
+	},{
+        'msg.msgType':{$in:['chat','g_card']},
+		'msg.userId':'wh90013524'
+        'msg.sendTime':{$gt:1496654230780.0,$nin:['']},
+	}]
+}).limit(50).sort({'msg.sendTime':-1}).explain(2)
 
-另外为了兼顾排序，我想使用msg.sendTime和msg.msgtype的复合索引来配合索引交集，此时mongo
-会直接选择这个复合索引，而不会使用索引交集。	
+两个变动：1.or裂开。 2.sendTime 后置。
+
+此时建立 msgType,userId,sendTime  和 msgType,recvId,sendTime,或者建
+立单索引，调用索引交集的机制。
+
+第二种办法：不改变现有的语句，修改索引。
+
+经测试:
+        删掉所有的自建索引，当第一种情况处理，建立time,type,recvid 和 
+time，type,userid, 此时使用的是compound index,并没有触发or机制。
+        删掉所有的自建索引，建立type,recvid,time 和 type,userid,time ,
+此时使用了caluse 机制，索引可以使用。但是对于or的两部分，两种方案，每种
+方案下对两个分支使用了同样的索引1或2。
+        删掉所有的自建索引，建立recvid 和 userId ,此时是一种方案下，
+两个索引同时使用, or机制正常启用。
 ```
 贴几篇有用的文章：
 
