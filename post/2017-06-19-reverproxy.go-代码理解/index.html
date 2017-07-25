@@ -1,0 +1,439 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Go：ReverProxy.Go 代码理解 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/about/">About</a> </li>
+      
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Go：ReverProxy.Go 代码理解</h1>
+			  <span class="post-date">Mon ,Jun 19 ,2017</span>
+			      <p>对使用GO语言实现反向代理的几种技术的理解与分析</p>
+
+<!--break-->
+
+<p>Talk is cheap, I will show you the code.</p>
+
+<p>通过阅读代码，一共看到了几种实现代理的方法</p>
+
+<ol>
+<li><p>io.copy</p></li>
+
+<li><p>http.Client</p></li>
+
+<li><p>reverseProxy</p></li>
+</ol>
+
+<pre><code>
+package httputil
+
+import (
+    &quot;context&quot;
+    &quot;io&quot;
+    &quot;log&quot;
+    &quot;net&quot;
+    &quot;net/http&quot;
+    &quot;net/url&quot;
+    &quot;strings&quot;
+    &quot;sync&quot;
+    &quot;time&quot;
+)
+
+var onExitFlushLoop func()      //函数式编程的写法 
+
+
+//这是一个结构体，可继承
+type ReverseProxy struct {
+    
+    Director func(*http.Request)
+
+    // If nil, http.DefaultTransport is used.
+    // RoundTripper是一种类型，&amp;Transport
+
+    Transport http.RoundTripper
+
+    // FlushInterval specifies the flush interval
+    // to flush to the client while copying the
+    // response body.
+    // If zero, no periodic flushing is done.
+    FlushInterval time.Duration
+
+    // ErrorLog specifies an optional logger for errors
+    // that occur when attempting to proxy the request.
+    // If nil, logging goes to os.Stderr via the log package's
+    // standard logger.
+    ErrorLog *log.Logger
+
+    // BufferPool optionally specifies a buffer pool to
+    // get byte slices for use by io.CopyBuffer when
+    // copying HTTP response bodies.
+
+    // 请求体使用 bufferpool 类型的 BufferPool
+    BufferPool BufferPool
+
+    // ModifyResponse is an optional function that
+    // modifies the Response from the backend.
+    // If it returns an error, the proxy returns a StatusBadGateway error.
+    ModifyResponse func(*http.Response) error
+}
+
+// A BufferPool is an interface for getting and returning temporary
+// byte slices for use by io.CopyBuffer.
+
+type BufferPool interface {
+    Get() []byte
+    Put([]byte)
+}
+
+//字符串直接相加，貌似也没有别的更好的办法
+
+func singleJoiningSlash(a, b string) string {
+    aslash := strings.HasSuffix(a, &quot;/&quot;)
+    bslash := strings.HasPrefix(b, &quot;/&quot;)
+    switch {
+    case aslash &amp;&amp; bslash:
+        return a + b[1:]
+    case !aslash &amp;&amp; !bslash:
+        return a + &quot;/&quot; + b
+    }
+    return a + b
+}
+
+// http://192.168.177.128:8081 &quot;/&quot;
+// NewSingleHostReverseProxy returns a new ReverseProxy that routes
+// URLs to the scheme, host, and base path provided in target. If the
+// target's path is &quot;/base&quot; and the incoming request was for &quot;/dir&quot;,
+// the target request will be for /base/dir.
+// NewSingleHostReverseProxy does not rewrite the Host header.
+// To rewrite Host headers, use ReverseProxy directly with a custom
+// Director policy.
+
+//返回了一个结构体指针
+
+func NewSingleHostReverseProxy(target *url.URL) *ReverseProxy {
+    targetQuery := target.RawQuery
+    director := func(req *http.Request) {
+        req.URL.Scheme = target.Scheme
+        req.URL.Host = target.Host
+        req.URL.Path = singleJoiningSlash(target.Path, req.URL.Path)
+        if targetQuery == &quot;&quot; || req.URL.RawQuery == &quot;&quot; {
+            req.URL.RawQuery = targetQuery + req.URL.RawQuery
+        } else {
+            req.URL.RawQuery = targetQuery + &quot;&amp;&quot; + req.URL.RawQuery
+        }
+        if _, ok := req.Header[&quot;User-Agent&quot;]; !ok {
+            // explicitly disable User-Agent so it's not set to default value
+            req.Header.Set(&quot;User-Agent&quot;, &quot;&quot;)
+        }
+    }
+    return &amp;ReverseProxy{Director: director}
+}
+
+func copyHeader(dst, src http.Header) {
+    for k, vv := range src {
+        for _, v := range vv {
+            dst.Add(k, v)
+        }
+    }
+}
+
+// Hop-by-hop headers. These are removed when sent to the backend.
+// http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html
+var hopHeaders = []string{
+    &quot;Connection&quot;,
+    &quot;Proxy-Connection&quot;, // non-standard but still sent by libcurl and rejected by e.g. google
+    &quot;Keep-Alive&quot;,
+    &quot;Proxy-Authenticate&quot;,
+    &quot;Proxy-Authorization&quot;,
+    &quot;Te&quot;,      // canonicalized version of &quot;TE&quot;
+    &quot;Trailer&quot;, // not Trailers per URL above; http://www.rfc-editor.org/errata_search.php?eid=4522
+    &quot;Transfer-Encoding&quot;,
+    &quot;Upgrade&quot;,
+}
+
+func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+    transport := p.Transport
+    if transport == nil {
+        transport = http.DefaultTransport
+    }
+
+    ctx := req.Context()      //上下文是个什么神奇的东西
+
+    // For outgoing client requests, the context controls cancelation.
+    // For incoming server requests, the context is canceled when the
+    // client's connection closes, the request is canceled (with HTTP/2),
+    // or when the ServeHTTP method returns.
+
+    if cn, ok := rw.(http.CloseNotifier); ok {
+        var cancel context.CancelFunc
+        ctx, cancel = context.WithCancel(ctx)
+        defer cancel() //ServeHTTP method returns
+        notifyChan := cn.CloseNotify() //回调
+        go func() {
+            select {
+            case &lt;-notifyChan:
+                cancel()
+            case &lt;-ctx.Done():
+            }
+        }()
+    }
+
+    outreq := new(http.Request)
+    *outreq = *req // includes shallow copies of maps, but okay
+    if req.ContentLength == 0 {
+        outreq.Body = nil // Issue 16036: nil Body for http.Transport retries
+    }
+    outreq = outreq.WithContext(ctx)
+
+    p.Director(outreq)
+    outreq.Close = false
+
+    // We are modifying the same underlying map from req (shallow
+    // copied above) so we only copy it if necessary.
+    copiedHeaders := false
+
+    // Remove hop-by-hop headers listed in the &quot;Connection&quot; header.
+    // See RFC 2616, section 14.10.
+    if c := outreq.Header.Get(&quot;Connection&quot;); c != &quot;&quot; {
+        for _, f := range strings.Split(c, &quot;,&quot;) {
+            if f = strings.TrimSpace(f); f != &quot;&quot; {
+                if !copiedHeaders {
+                    outreq.Header = make(http.Header)
+                    copyHeader(outreq.Header, req.Header)
+                    copiedHeaders = true
+                }
+                outreq.Header.Del(f)
+            }
+        }
+    }
+
+    // Remove hop-by-hop headers to the backend. Especially
+    // important is &quot;Connection&quot; because we want a persistent
+    // connection, regardless of what the client sent to us.
+    for _, h := range hopHeaders {
+        if outreq.Header.Get(h) != &quot;&quot; {
+            if !copiedHeaders {
+                outreq.Header = make(http.Header)
+                copyHeader(outreq.Header, req.Header)
+                copiedHeaders = true
+            }
+            outreq.Header.Del(h)
+        }
+    }
+
+    if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+        // If we aren't the first proxy retain prior
+        // X-Forwarded-For information as a comma+space
+        // separated list and fold multiple headers into one.
+        if prior, ok := outreq.Header[&quot;X-Forwarded-For&quot;]; ok {
+            clientIP = strings.Join(prior, &quot;, &quot;) + &quot;, &quot; + clientIP
+        }
+        outreq.Header.Set(&quot;X-Forwarded-For&quot;, clientIP)
+    }
+
+    res, err := transport.RoundTrip(outreq)
+    if err != nil {
+        p.logf(&quot;http: proxy error: %v&quot;, err)
+        rw.WriteHeader(http.StatusBadGateway)
+        return
+    }
+
+    // Remove hop-by-hop headers listed in the
+    // &quot;Connection&quot; header of the response.
+    if c := res.Header.Get(&quot;Connection&quot;); c != &quot;&quot; {
+        for _, f := range strings.Split(c, &quot;,&quot;) {
+            if f = strings.TrimSpace(f); f != &quot;&quot; {
+                res.Header.Del(f)
+            }
+        }
+    }
+
+    for _, h := range hopHeaders {
+        res.Header.Del(h)
+    }
+
+    if p.ModifyResponse != nil {
+        if err := p.ModifyResponse(res); err != nil {
+            p.logf(&quot;http: proxy error: %v&quot;, err)
+            rw.WriteHeader(http.StatusBadGateway)
+            return
+        }
+    }
+
+    copyHeader(rw.Header(), res.Header)
+
+    // The &quot;Trailer&quot; header isn't included in the Transport's response,
+    // at least for *http.Transport. Build it up from Trailer.
+    if len(res.Trailer) &gt; 0 {
+        trailerKeys := make([]string, 0, len(res.Trailer))
+        for k := range res.Trailer {
+            trailerKeys = append(trailerKeys, k)
+        }
+        rw.Header().Add(&quot;Trailer&quot;, strings.Join(trailerKeys, &quot;, &quot;))
+    }
+
+    rw.WriteHeader(res.StatusCode)
+    if len(res.Trailer) &gt; 0 {
+        // Force chunking if we saw a response trailer.
+        // This prevents net/http from calculating the length for short
+        // bodies and adding a Content-Length.
+        if fl, ok := rw.(http.Flusher); ok {
+            fl.Flush()
+        }
+    }
+    p.copyResponse(rw, res.Body)
+    res.Body.Close() // close now, instead of defer, to populate res.Trailer
+    copyHeader(rw.Header(), res.Trailer)
+}
+
+func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
+    if p.FlushInterval != 0 {
+        if wf, ok := dst.(writeFlusher); ok {
+            mlw := &amp;maxLatencyWriter{
+                dst:     wf,
+                latency: p.FlushInterval,
+                done:    make(chan bool),
+            }
+            go mlw.flushLoop()
+            defer mlw.stop()
+            dst = mlw
+        }
+    }
+
+    var buf []byte
+    if p.BufferPool != nil {
+        buf = p.BufferPool.Get()
+    }
+    p.copyBuffer(dst, src, buf)
+    if p.BufferPool != nil {
+        p.BufferPool.Put(buf)
+    }
+}
+
+func (p *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int64, error) {
+    if len(buf) == 0 {
+        buf = make([]byte, 32*1024)
+    }
+    var written int64
+    for {
+        nr, rerr := src.Read(buf)
+        if rerr != nil &amp;&amp; rerr != io.EOF {
+            p.logf(&quot;httputil: ReverseProxy read error during body copy: %v&quot;, rerr)
+        }
+        if nr &gt; 0 {
+            nw, werr := dst.Write(buf[:nr])
+            if nw &gt; 0 {
+                written += int64(nw)
+            }
+            if werr != nil {
+                return written, werr
+            }
+            if nr != nw {
+                return written, io.ErrShortWrite
+            }
+        }
+        if rerr != nil {
+            return written, rerr
+        }
+    }
+}
+
+func (p *ReverseProxy) logf(format string, args ...interface{}) {
+    if p.ErrorLog != nil {
+        p.ErrorLog.Printf(format, args...)
+    } else {
+        log.Printf(format, args...)
+    }
+}
+
+type writeFlusher interface {
+    io.Writer
+    http.Flusher
+}
+
+type maxLatencyWriter struct {
+    dst     writeFlusher
+    latency time.Duration
+
+    mu   sync.Mutex // protects Write + Flush
+    done chan bool
+}
+
+func (m *maxLatencyWriter) Write(p []byte) (int, error) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    return m.dst.Write(p)
+}
+
+func (m *maxLatencyWriter) flushLoop() {
+    t := time.NewTicker(m.latency)
+    defer t.Stop()
+    for {
+        select {
+        case &lt;-m.done:
+            if onExitFlushLoop != nil {
+                onExitFlushLoop()
+            }
+            return
+        case &lt;-t.C:
+            m.mu.Lock()
+            m.dst.Flush()
+            m.mu.Unlock()
+        }
+    }
+}
+
+func (m *maxLatencyWriter) stop() { m.done &lt;- true }
+
+</code></pre>
+
+			</div>
+
+			
+		</div>
+
+  </body>
+</html>

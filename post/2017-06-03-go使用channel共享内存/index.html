@@ -1,0 +1,149 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Go：使用channel共享内存 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/about/">About</a> </li>
+      
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Go：使用channel共享内存</h1>
+			  <span class="post-date">Sat ,Jun 3 ,2017</span>
+			      <p>Go的口号：不要通过共享内存来通信，而应通过通信来共享内存</p>
+
+<!--break-->
+
+<p>Talk is cheap, I will show you the code.</p>
+
+<pre><code>func main() {
+    c1 := make(chan int)
+    quit := make(chan int)
+    test := 0
+    a := [...]int{1, 2, 3}
+    for _, v := range a {
+        go func(v int) {
+            for {
+                select {
+                case my := &lt;-c1:
+                    my++
+                    fmt.Printf(&quot;id: %d now count is %d \n&quot;, v, my)
+                    c1 &lt;- my
+                case &lt;-quit:
+                    fmt.Printf(&quot;id: %d return \n&quot;, v)
+                    return
+                }
+            }
+        }(v)
+    }
+    c1 &lt;- test
+    time.Sleep(5000)
+    fmt.Printf(&quot;we get the count: %d \n&quot;, test)
+    for _, v := range a {
+        quit &lt;- v
+    }
+    fmt.Printf(&quot;all is over \n&quot;)
+    return
+    //panic(&quot;hello&quot;)
+}
+
+</code></pre>
+
+<p>如代码所示，3个Go程对test进行计数。使用c1传递消息，使用quit传递退出消息。</p>
+
+<p>这段代码有一个问题。
+在调试过程中，出现了以下的错误信息。</p>
+
+<pre><code>id: 1 now count is 495 
+id: 2 now count is 496 
+id: 3 now count is 497 
+id: 1 return 
+id: 2 return 
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan send]:
+main.main()
+    /home/du/go-learning/test.go:33 +0x1e4
+
+goroutine 7 [chan send]:
+main.main.func1(0xc42006a060, 0xc42006a0c0, 0x3)
+    /home/du/go-learning/test.go:22 +0x1c7
+created by main.main
+    /home/du/go-learning/test.go:27 +0x11a
+exit status 2
+</code></pre>
+
+<p>可以看出，goroutine 1，7 分别卡在了发送上。即</p>
+
+<pre><code>13行： c1 &lt;- my
+25行： quit &lt;- v
+</code></pre>
+
+<p>非缓冲的chan必须接收方和发送方都准备好，才能实现通信。
+当ID为1，2的Go程退出后，c1没有接收方了，因此死锁。
+最后一个quit也没有接收方，因此死锁。</p>
+
+<p>刚开始，主Go程给c1中发送数据test，使整个流程流动起来，最终也要拿出test,终止流程。</p>
+
+<pre><code>    c1 &lt;- test  
+    time.Sleep(5000)
+    test  = &lt;-c1   //增加的代码
+
+最终输出：
+    id: 3 now count is 1 
+    id: 1 now count is 2 
+    id: 3 now count is 3 
+    id: 1 now count is 4 
+    id: 2 now count is 5 
+    we get the count: 5 
+    all is over
+</code></pre>
+
+			</div>
+
+			
+		</div>
+
+  </body>
+</html>

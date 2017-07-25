@@ -1,0 +1,219 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Go内存泄漏分析及解决办法 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/about/">About</a> </li>
+      
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Go内存泄漏分析及解决办法</h1>
+			  <span class="post-date">Mon ,Jun 5 ,2017</span>
+			      
+
+<p>文章将展示常见的Goroutine leak以及对应的解决办法。</p>
+
+<!--break-->
+
+<p>Talk is cheap, I will show you the code.</p>
+
+<h4 id="各种泄露的展示"><strong>各种泄露的展示</strong></h4>
+
+<p><a href="http://openmymind.net/Leaking-Goroutines/">第一段代码来源</a></p>
+
+<pre><code>type Writer struct {
+  queue chan []byte
+}
+
+func NewWriter() *Writer {
+  w := &amp;Writer{
+    queue: make(chan []byte, 10),
+  }
+  go w.process()
+  return w
+}
+
+func (w *Writer) Write(message []byte) {
+  w.queue &lt;- message
+}
+
+func (w *Writer) process() {
+  for {
+    message := &lt;- w.queue
+    // do something with message
+  }
+}
+
+func main() {
+  fmt.Println(runtime.NumGoroutine()) 
+  test()
+  fmt.Println(runtime.NumGoroutine())
+}
+
+func test() {
+  NewWriter()
+}
+</code></pre>
+
+<p>test中执行的NewWriter消失在了上下文里，Go程则存在于后台，造成了泄露。</p>
+
+<p><a href="http://www.itwendao.com/article/detail/217770.html">第二段代码,做了一些增加</a></p>
+
+<pre><code>package main
+import (
+    &quot;fmt&quot;
+    &quot;math/rand&quot;
+    &quot;time&quot;
+)
+
+func queryFromSrc(src string) (ret string) {
+    time.Sleep(1000)
+    ret = fmt.Sprintf(&quot;query done&quot;)
+    return ret
+}
+
+func multiQuery() (ret string) {
+    res := make(chan string)
+    go func() {
+        temp := make(chan int)
+        num := &lt;- temp
+        fmt.Printf(&quot;get num %d \n&quot;,num) 
+    }()
+    go func() {
+        res &lt;- queryFromSrc(&quot;ns2.dnsserver.com&quot;)
+    }()
+    return &quot;hello&quot;
+}
+
+func main() {
+    fmt.Println(&quot;start multi query:&quot;)
+    res := multiQuery()
+    fmt.Println(&quot;res=&quot;, res)
+}
+</code></pre>
+
+<p>上述的代码一共有两处导致内存泄露的部分：</p>
+
+<p>第18行：从一个没有输入的管道中阻塞读取数据</p>
+
+<p>第22行：向一个没有接收的管道中写入数据阻塞。</p>
+
+<p>以上都会造成内存泄漏，总结可以得出：
+&gt; * Go程想从一个通道读数据，但通道没有写入数据。
+&gt; * Go程想往一个通道写数据，但是这个通道没有接收方，该Go程将阻塞无法向下执行
+&gt; * 综合上述两种情况，如本文的第一段代码，Go程内形成闭环，与外部隔绝。</p>
+
+<h4 id="解决办法"><strong>解决办法</strong></h4>
+
+<p>1.增加管道缓存</p>
+
+<p>上述第二段代码中，第22行的问题，如果，15行的代码变成res := make(chan string, 1),则不会写阻塞。最终数据会写入缓存管道，依靠Gc回收。</p>
+
+<p>2.增加读超时处理</p>
+
+<p>针对第18行的问题，展示一种超时处理：</p>
+
+<pre><code>go func() {
+    defer done(0)
+    temp := make(chan int)
+    select {
+        case num := &lt;- temp:         //正常的接收
+            fmt.Printf(&quot;%d \n&quot;,num)
+        case &lt;- time.After(1) :      //触发了超时
+            fmt.Printf(&quot;time done stop 0 \n&quot;)
+    }
+}()
+
+</code></pre>
+
+<p>3.生产者close生产管道，在消费的Go程内部使用for range形式，遇到close会跳出循环。</p>
+
+<p>4.全局的关闭管道, 可以做错误处理，下文的select, 当在外部因为任何原因关闭 in 时， select中in 会被触发。</p>
+
+<pre><code>package main
+
+import (
+    &quot;fmt&quot;
+    &quot;time&quot;
+    &quot;runtime&quot;
+)
+
+
+func test(in &lt;- chan int, i int) {
+    // 模拟的是close 关闭的情况
+    for my := range in {        
+        fmt.Printf(&quot; %d is shut down \n&quot;, my)
+    }
+    fmt.Printf(&quot;out %d is shut down \n&quot;, i)
+    
+    /*
+    // 模拟外部关闭的情况，in此时可以看作统一的退出管道。
+    select {
+        case  &lt;- in:
+            fmt.Printf(&quot; %d is shut down \n&quot;, i)
+            return
+    }
+    */
+}
+
+func main() {
+    in := make(chan int)
+    for i := 0; i &lt; 10; i++ {
+        go test(in, i)
+    }
+    fmt.Println(runtime.NumGoroutine())
+    close(in)
+    time.Sleep(10000)
+    fmt.Println(runtime.NumGoroutine())
+}
+</code></pre>
+
+			</div>
+
+			
+		</div>
+
+  </body>
+</html>

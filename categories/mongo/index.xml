@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Mongo on Diamondu</title>
+    <link>https://wuhang-du.github.io/categories/mongo/</link>
+    <description>Recent content in Mongo on Diamondu</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 28 Jun 2017 08:36:54 +0000</lastBuildDate>
+    
+	<atom:link href="https://wuhang-du.github.io/categories/mongo/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Mongo锁机制与索引的理解</title>
+      <link>https://wuhang-du.github.io/post/2017-06-28-mongo-lock/</link>
+      <pubDate>Wed, 28 Jun 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-06-28-mongo-lock/</guid>
+      <description>对Mongo锁机制以及索引的一些分析与理解
+ 1.锁机制 锁机制保证多个客户端读和写时看到的是同样的数据。
+2.2 之前，mongo 实例只有一把全局的读写锁。
+2.2 之后，实现了粒度更小，数据库级别的锁。同时，对于一些长时间运行的操作，当满足一些条件时，则放弃锁。 全局锁仍然存在，但是只使用在mongo实例的级别，而且用的很少。我的理解是对全局的admin等操作时，会用到。
+我现在使用的版本是mongo 2.6, mongostat会返回一个 locked_db ,这个参数在以后的版本中没有了，之后的版本 是locked ,含义是 the percent of time in a global write lock.
+mongo 2.2 locked_db The percent of time in the per-database context-specific lock. mongostat will report the database that has spent the most time since the last mongostat call with a write lock. This value represents the amount of time that the listed database spent in a locked state combined with the time that the mongod spent in the global lock.</description>
+    </item>
+    
+  </channel>
+</rss>

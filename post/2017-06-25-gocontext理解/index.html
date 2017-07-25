@@ -1,0 +1,192 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Go: Context 理解 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/about/">About</a> </li>
+      
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Go: Context 理解</h1>
+			  <span class="post-date">Sun ,Jun 25 ,2017</span>
+			      <p>在看proxy的时候，看到了context这个package.</p>
+
+<!--break-->
+
+<p>source 1: <a href="https://golang.org/pkg/context/">Package context</a></p>
+
+<pre><code>Incoming requests to a server should create a Context, 
+
+and outgoing calls to servers should accept a Context
+
+&gt; * 对于，访问本服务器的Incoming 请求应该建立一个Context.
+
+&gt; * 对于，从本服务器访问其他服务器的Outgoing 请求应该接收Context.
+
+</code></pre>
+
+<p>下面的链接中包含了创建一个context的代码。</p>
+
+<p>source 2: <a href="https://blog.golang.org/context">Go Concurrency Patterns: Context</a></p>
+
+<pre><code>WithCancel
+WithDeadline
+WithTimeout
+WithValue
+
+以上函数根据不同的含义，分别返回parent Context的child Context。
+
+package main
+
+import (
+    &quot;context&quot;
+    &quot;fmt&quot;
+    &quot;time&quot;
+)
+
+func main() {
+    d := time.Now().Add(50 * time.Millisecond)
+    ctx, cancel := context.WithDeadline(context.Background(), d)
+
+    // Even though ctx will be expired, it is good practice to call its
+    // cancelation function in any case. Failure to do so may keep the
+    // context and its parent alive longer than necessary.
+    defer cancel()
+
+    select {
+    case &lt;-time.After(1 * time.Second):
+        fmt.Println(&quot;overslept&quot;)
+    case &lt;-ctx.Done():
+        fmt.Println(ctx.Err())
+    }
+
+}
+</code></pre>
+
+<p>总结：Context是Go提供的一种机制，可以完成：</p>
+
+<p>场景1：有一个请求，其中包含了若干子请求。当子请求还是与对应的服务器通信时，父请求因为各种各样的原因停止了,</p>
+
+<p>此时，单纯的关闭父请求是没有意义的，Context机制就可以实现关闭父请求的同时，关闭其他的子请求。</p>
+
+<p>场景2：传递 request-scoped 数据。传递动态上下文所需的数据。</p>
+
+<p>示例如下：</p>
+
+<pre><code>package main
+
+import (
+    &quot;context&quot;
+    &quot;fmt&quot;
+    &quot;time&quot;
+)
+
+type key int
+
+func main() {
+    ctx, cancel := context.WithCancel(context.Background())
+    t := key(1)
+    ctx_child := context.WithValue(ctx, t, &quot;hello&quot;)
+    go test(ctx_child)
+    cancel()
+    time.Sleep(1 * time.Second)
+}
+
+func test(ctx context.Context) {
+    t := key(1)
+    fmt.Printf(&quot;%s \n&quot;, ctx.Value(t))
+    select {
+    case &lt;-ctx.Done():
+        fmt.Printf(&quot;bye bye in child \n&quot;)
+    }
+}
+
+output:
+hello
+bye bye in child
+</code></pre>
+
+<p>上面的程序刻意创造了两层结构，验证了parent ctx关闭时，child ctx也关闭，同时也实现了 scope传值。</p>
+
+<p>ctx在使用中，官方推荐的是一层层深入，每一层都需要创建新的ctx,传递给新的go程，同时在本层中关闭。</p>
+
+<p>调用必须是同步的调用。原因是上层的context调用，会关闭下层所有的 context的调用，则下层的各个功能模块还没有完成任务，而中途关闭。</p>
+
+<p>反过来说，当上层出现问题的时候，这个作用刚好可以保证所有的下层都正常关闭。</p>
+
+<p>参考：<a href="http://www.zenlife.tk/go-context.md">go-context使用</a></p>
+
+<pre><code>正确的调用：
+
+  1层
+  生成child_ctx
+  defer child_cancel()
+    2层调用(ctx)
+        起go程跑任务
+        select {
+            case: ctx.Done()  //捕捉上层的异常，或者ctx本身关闭
+            case: 任务完成
+        }
+    2层结束
+  1层结束
+  
+错误的调用：
+
+  1层
+    2层调用
+        起Go程去跑任务
+    2层结束
+  1层结束
+
+这时候Go程还在跑，结果还没有出来，就被上层强制关闭了，逗。
+</code></pre>
+
+			</div>
+
+			
+		</div>
+
+  </body>
+</html>

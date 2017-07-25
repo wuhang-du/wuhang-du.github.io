@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Development on Diamondu</title>
+    <link>https://wuhang-du.github.io/tags/development/</link>
+    <description>Recent content in Development on Diamondu</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 12 May 2017 08:36:54 +0000</lastBuildDate>
+    
+	<atom:link href="https://wuhang-du.github.io/tags/development/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>wrk压测工具简析</title>
+      <link>https://wuhang-du.github.io/post/2017-05-12-start-wrk/</link>
+      <pubDate>Fri, 12 May 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-05-12-start-wrk/</guid>
+      <description>Wrk是一款高性能的基于Linux平台的压测工具。
+ 1.基础功能 命令是：
+wrk -t12 -c400 -d30s http://127.0.0.1:8080/index.html -t : 线程数 -c : http连接总数。 -d : 测试时长。 -s : lua脚本参数  2.简单分析 wrk主要是
+  基于redis的ae模块, 提供异步框架。 nginx的httpparser, 提供http的请求解析。 lua脚本，利用Lua的创建更复杂的测试用例。   3.简单使用 Http压测工具wrk使用指南
+wrk &amp;ndash; 小巧轻盈的 http 性能测试工具.</description>
+    </item>
+    
+    <item>
+      <title>开始技术博客</title>
+      <link>https://wuhang-du.github.io/post/2017-05-11-first/</link>
+      <pubDate>Mon, 01 May 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-05-11-first/</guid>
+      <description>我的第一篇 github 博客, 本博客使用 jekyll + bootstrap 搭建!
+ 感谢 github 提供的 Github Pages 功能!
+此博客布局参考了 Monkey Snatch Banana 博客
+个人页面应用了 resumecard 项目
+本项目Fork自liungkejin，在此特别感谢。
+echo &amp;quot;你好, Github Pages!&amp;quot;;  </description>
+    </item>
+    
+  </channel>
+</rss>

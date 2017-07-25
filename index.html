@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="https://wuhang-du.github.io/index.xml" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+<body class=" layout-reverse">
+
+<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/about/">About</a> </li>
+      
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+    <div class="content container">
+<div class="posts">
+
+      
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-06-28-mongo-lock/">
+        Mongo锁机制与索引的理解
+      </a>
+    </h1>
+
+    <span class="post-date">Wed, Jun 28, 2017</span>
+
+    
+
+<p>对Mongo锁机制以及索引的一些分析与理解</p>
+
+<!--break-->
+
+<hr />
+
+<h4 id="1-锁机制"><strong>1.锁机制</strong></h4>
+
+<hr />
+
+<p>锁机制保证多个客户端读和写时看到的是同样的数据。</p>
+
+<p>2.2 之前，mongo 实例只有一把全局的读写锁。</p>
+
+<p>2.2 之后，实现了粒度更小，数据库级别的锁。同时，对于一些长时间运行的操作，当满足一些条件时，则放弃锁。
+  全局锁仍然存在，但是只使用在mongo实例的级别，而且用的很少。我的理解是对全局的admin等操作时，会用到。</p>
+
+<p>我现在使用的版本是mongo 2.6, mongostat会返回一个 locked_db ,这个参数在以后的版本中没有了，之后的版本
+是locked ,含义是 the percent of time in a global write lock.</p>
+
+<pre><code>mongo 2.2  locked_db
+
+The percent of time in the per-database context-specific lock. mongostat will report
+the database that has spent the most time since the last mongostat call with a write
+ lock.
+
+This value represents the amount of time that the listed database spent in a locked 
+state combined with the time that the mongod spent in the global lock. Because of 
+this, and the sampling method, you may see some values greater than 100%
+
+choosing “global” displays a derived metric that adds the percent of time spent in 
+the global lock (typically a very small number) plus the percent of time locked by the
+ hottest database at the time of measurement, where hottest means “most locked.” 
+Because the data is sampled and combined, it is possible to see values over 100%
+
+ps:今天使用createindex({},{'background':true})时，这个值在10s内维持在160%-170%之间，
+同时page faults从0增加，看起来是锁住了内存，query等操作从硬盘读数据，内存一直保持
+在locked状态，所以升到了100%以上。
+</code></pre>
+
+<p>MongoDB uses a readers-writer lock that allows concurrent reads access to a database
+but gives exclusive access to a single write operation.</p>
+
+<p>The “greediness” of our writes was not only keeping our clients from being able to access
+ data (in any of our collections), but causing additional writes to be delayed</p>
+
+<p>正常的Locked_db并没有什么定论，根据实际的场景决定，如果是 写频繁的业务，有可能普遍超过60%，
+但是 读频繁的业务，就不会超过10%。</p>
+
+<pre><code>wiki上读写锁的伪代码：
+Begin Read
+Lock r.
+Increment b.
+If b = 1, lock g.
+Unlock r.
+End Read
+Lock r.
+Decrement b.
+If b = 0, unlock g.
+Unlock r.
+Begin Write
+Lock g.
+End Write
+Unlock g.
+</code></pre>
+
+<hr />
+
+<h4 id="2-索引"><strong>2.索引</strong></h4>
+
+<hr />
+
+<p>关于索引，mongo除了单索引之外，还支持复合索引，还有一个神奇的东西叫<strong>索引交集</strong>。</p>
+
+<p><strong>单索引</strong>： 就是简单的单个索引，这种情况下顺序不重要，mongo会reverse.</p>
+
+<p><strong>复合索引</strong>：多个field生成一个索引，复合索引有几点需要注意：</p>
+
+<blockquote>
+<ul>
+<li>a,b,c代表字段</li>
+<li>1.索引字段的顺序，例如，使用abc生成索引，查询顺序是abc,ab,a的时候都可以用的上，bc,c就不会使用。</li>
+<li>2.索引字段的升序(1)降序(-1),如果(a:1,b:-1)生成索引，则(a:1,b:-1),(a:-1,b:1)的查询都可以使用该索引，但是(a:-1,b:-1),(a:1,b:1)就不会使用。</li>
+</ul>
+</blockquote>
+
+<p><strong>索引交集</strong>：是mongo提供的一种机制，可以将单个索引联合起来使用。例如2提到的索引升序降序，如果使用
+两个单个的(a:1),(b:1)就可以支持4种组合了。</p>
+
+<p>索引交集与复合索引的比较：复合索引必须注重：fileds的顺序，以及fileds 的顺序逆序的组合。然而，索引交集的使用有一个限制，即如果sort部分，需要使用的索引与query不相关的索引，则无法使用索引交集。</p>
+
+<pre><code class="language-go">{ qty: 1 }
+{ status: 1, ord_date: -1 }
+{ status: 1 }
+{ ord_date: -1 }
+
+{ qty: 1 }
+{ status: 1, ord_date: -1 }
+{ status: 1 }
+{ ord_date: -1 }
+no: 不使用索引交集
+no: 没用上索引交集, compound index也不支持
+db.orders.find({qty:{$gt:10}}).sort( { status: 1 } )
+yes: 用上了compound index, 没用索引交集
+db.orders.find({qty:{$gt:10}, status: &quot;A&quot; } ).sort( { ord_date: -1 } )
+</code></pre>
+
+<p><strong>结论就是需要具体问题具体对待，没有技术银弹</strong>。</p>
+
+<pre><code>举个今天的例子：
+
+db.push_log.find({
+        'msg.sendTime':{$gt:1496654230780.0,$nin:['']},
+        'msg.msgType':{$in:['chat','g_card']},
+       $or:[{'msg.recvId':{$in:['wh90013524']}},{'msg.userId':'wh90013524'}]
+       }).limit(50).sort({'msg.sendTime':-1}).explain(2)
+
+对于这个例子，两种思路：
+第一种：重写查询语句，将or提到顶层，这样的话，就相当于两个不同的查询。
+
+db.push_log.find({
+    $or:[{
+        'msg.msgType':{$in:['chat','g_card']},
+        'msg.recvId':{$in:['wh90013524']}
+        'msg.sendTime':{$gt:1496654230780.0,$nin:['']},
+    },{
+        'msg.msgType':{$in:['chat','g_card']},
+        'msg.userId':'wh90013524'
+        'msg.sendTime':{$gt:1496654230780.0,$nin:['']},
+    }]
+}).limit(50).sort({'msg.sendTime':-1}).explain(2)
+
+两个变动：1.or裂开。 2.sendTime 后置。
+
+此时建立 msgType,userId,sendTime  和 msgType,recvId,sendTime,或者建
+立单索引，调用索引交集的机制。
+
+第二种办法：不改变现有的语句，修改索引。
+
+经测试:
+        删掉所有的自建索引，当第一种情况处理，建立time,type,recvid 和 
+time，type,userid, 此时使用的是compound index,并没有触发or机制。
+        删掉所有的自建索引，建立type,recvid,time 和 type,userid,time ,
+此时使用了caluse 机制，索引可以使用。但是对于or的两部分，两种方案，每种
+方案下对两个分支使用了同样的索引1或2。
+        删掉所有的自建索引，建立recvid 和 userId ,此时是一种方案下，
+两个索引同时使用, or机制正常启用。
+</code></pre>
+
+<p>贴几篇有用的文章：</p>
+
+<p>前两篇是关于锁机制。</p>
+
+<p><a href="https://www.mongodb.com/blog/post/learn-about-lock-percentage-concurrency-in">Learn About Lock Percentage: Concurrency in MongoDB</a></p>
+
+<p><a href="https://www.mongodb.com/blog/post/mongodb-performance-optimization-with-mms">mongodb-performance-optimization-with-mms</a></p>
+
+<p>这几篇是关于索引的讨论。</p>
+
+<p><a href="https://docs.mongodb.com/master/core/index-compound/">复合索引</a></p>
+
+<p><a href="https://docs.mongodb.com/master/core/index-intersection/#previous-versions">索引交集</a></p>
+
+<p><a href="https://stackoverflow.com/questions/43323102/mongodb-or-sort-index-how-to-avoid-sorting-in-memory?answertab=oldest#tab-top">MongoDB $or + sort + index. How to avoid sorting in memory?</a></p>
+
+<p><a href="https://blog.mlab.com/2012/06/cardinal-ins/">Cardinal $ins: MongoDB Query Performance over Ranges</a></p>
+
+<p><a href="https://stackoverflow.com/questions/42871998/mongodb-performance-impact-of-hint/42875033#42875033">Mongodb: Performance impact of $HINT</a></p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-06-25-gocontext%E7%90%86%E8%A7%A3/">
+        Go: Context 理解
+      </a>
+    </h1>
+
+    <span class="post-date">Sun, Jun 25, 2017</span>
+
+    <p>在看proxy的时候，看到了context这个package.</p>
+
+<!--break-->
+
+<p>source 1: <a href="https://golang.org/pkg/context/">Package context</a></p>
+
+<pre><code>Incoming requests to a server should create a Context, 
+
+and outgoing calls to servers should accept a Context
+
+&gt; * 对于，访问本服务器的Incoming 请求应该建立一个Context.
+
+&gt; * 对于，从本服务器访问其他服务器的Outgoing 请求应该接收Context.
+
+</code></pre>
+
+<p>下面的链接中包含了创建一个context的代码。</p>
+
+<p>source 2: <a href="https://blog.golang.org/context">Go Concurrency Patterns: Context</a></p>
+
+<pre><code>WithCancel
+WithDeadline
+WithTimeout
+WithValue
+
+以上函数根据不同的含义，分别返回parent Context的child Context。
+
+package main
+
+import (
+    &quot;context&quot;
+    &quot;fmt&quot;
+    &quot;time&quot;
+)
+
+func main() {
+    d := time.Now().Add(50 * time.Millisecond)
+    ctx, cancel := context.WithDeadline(context.Background(), d)
+
+    // Even though ctx will be expired, it is good practice to call its
+    // cancelation function in any case. Failure to do so may keep the
+    // context and its parent alive longer than necessary.
+    defer cancel()
+
+    select {
+    case &lt;-time.After(1 * time.Second):
+        fmt.Println(&quot;overslept&quot;)
+    case &lt;-ctx.Done():
+        fmt.Println(ctx.Err())
+    }
+
+}
+</code></pre>
+
+<p>总结：Context是Go提供的一种机制，可以完成：</p>
+
+<p>场景1：有一个请求，其中包含了若干子请求。当子请求还是与对应的服务器通信时，父请求因为各种各样的原因停止了,</p>
+
+<p>此时，单纯的关闭父请求是没有意义的，Context机制就可以实现关闭父请求的同时，关闭其他的子请求。</p>
+
+<p>场景2：传递 request-scoped 数据。传递动态上下文所需的数据。</p>
+
+<p>示例如下：</p>
+
+<pre><code>package main
+
+import (
+    &quot;context&quot;
+    &quot;fmt&quot;
+    &quot;time&quot;
+)
+
+type key int
+
+func main() {
+    ctx, cancel := context.WithCancel(context.Background())
+    t := key(1)
+    ctx_child := context.WithValue(ctx, t, &quot;hello&quot;)
+    go test(ctx_child)
+    cancel()
+    time.Sleep(1 * time.Second)
+}
+
+func test(ctx context.Context) {
+    t := key(1)
+    fmt.Printf(&quot;%s \n&quot;, ctx.Value(t))
+    select {
+    case &lt;-ctx.Done():
+        fmt.Printf(&quot;bye bye in child \n&quot;)
+    }
+}
+
+output:
+hello
+bye bye in child
+</code></pre>
+
+<p>上面的程序刻意创造了两层结构，验证了parent ctx关闭时，child ctx也关闭，同时也实现了 scope传值。</p>
+
+<p>ctx在使用中，官方推荐的是一层层深入，每一层都需要创建新的ctx,传递给新的go程，同时在本层中关闭。</p>
+
+<p>调用必须是同步的调用。原因是上层的context调用，会关闭下层所有的 context的调用，则下层的各个功能模块还没有完成任务，而中途关闭。</p>
+
+<p>反过来说，当上层出现问题的时候，这个作用刚好可以保证所有的下层都正常关闭。</p>
+
+<p>参考：<a href="http://www.zenlife.tk/go-context.md">go-context使用</a></p>
+
+<pre><code>正确的调用：
+
+  1层
+  生成child_ctx
+  defer child_cancel()
+    2层调用(ctx)
+        起go程跑任务
+        select {
+            case: ctx.Done()  //捕捉上层的异常，或者ctx本身关闭
+            case: 任务完成
+        }
+    2层结束
+  1层结束
+  
+错误的调用：
+
+  1层
+    2层调用
+        起Go程去跑任务
+    2层结束
+  1层结束
+
+这时候Go程还在跑，结果还没有出来，就被上层强制关闭了，逗。
+</code></pre>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-06-19-reverproxy.go-%E4%BB%A3%E7%A0%81%E7%90%86%E8%A7%A3/">
+        Go：ReverProxy.Go 代码理解
+      </a>
+    </h1>
+
+    <span class="post-date">Mon, Jun 19, 2017</span>
+
+    <p>对使用GO语言实现反向代理的几种技术的理解与分析</p>
+
+<!--break-->
+
+<p>Talk is cheap, I will show you the code.</p>
+
+<p>通过阅读代码，一共看到了几种实现代理的方法</p>
+
+<ol>
+<li><p>io.copy</p></li>
+
+<li><p>http.Client</p></li>
+
+<li><p>reverseProxy</p></li>
+</ol>
+
+<pre><code>
+package httputil
+
+import (
+    &quot;context&quot;
+    &quot;io&quot;
+    &quot;log&quot;
+    &quot;net&quot;
+    &quot;net/http&quot;
+    &quot;net/url&quot;
+    &quot;strings&quot;
+    &quot;sync&quot;
+    &quot;time&quot;
+)
+
+var onExitFlushLoop func()      //函数式编程的写法 
+
+
+//这是一个结构体，可继承
+type ReverseProxy struct {
+    
+    Director func(*http.Request)
+
+    // If nil, http.DefaultTransport is used.
+    // RoundTripper是一种类型，&amp;Transport
+
+    Transport http.RoundTripper
+
+    // FlushInterval specifies the flush interval
+    // to flush to the client while copying the
+    // response body.
+    // If zero, no periodic flushing is done.
+    FlushInterval time.Duration
+
+    // ErrorLog specifies an optional logger for errors
+    // that occur when attempting to proxy the request.
+    // If nil, logging goes to os.Stderr via the log package's
+    // standard logger.
+    ErrorLog *log.Logger
+
+    // BufferPool optionally specifies a buffer pool to
+    // get byte slices for use by io.CopyBuffer when
+    // copying HTTP response bodies.
+
+    // 请求体使用 bufferpool 类型的 BufferPool
+    BufferPool BufferPool
+
+    // ModifyResponse is an optional function that
+    // modifies the Response from the backend.
+    // If it returns an error, the proxy returns a StatusBadGateway error.
+    ModifyResponse func(*http.Response) error
+}
+
+// A BufferPool is an interface for getting and returning temporary
+// byte slices for use by io.CopyBuffer.
+
+type BufferPool interface {
+    Get() []byte
+    Put([]byte)
+}
+
+//字符串直接相加，貌似也没有别的更好的办法
+
+func singleJoiningSlash(a, b string) string {
+    aslash := strings.HasSuffix(a, &quot;/&quot;)
+    bslash := strings.HasPrefix(b, &quot;/&quot;)
+    switch {
+    case aslash &amp;&amp; bslash:
+        return a + b[1:]
+    case !aslash &amp;&amp; !bslash:
+        return a + &quot;/&quot; + b
+    }
+    return a + b
+}
+
+// http://192.168.177.128:8081 &quot;/&quot;
+// NewSingleHostReverseProxy returns a new ReverseProxy that routes
+// URLs to the scheme, host, and base path provided in target. If the
+// target's path is &quot;/base&quot; and the incoming request was for &quot;/dir&quot;,
+// the target request will be for /base/dir.
+// NewSingleHostReverseProxy does not rewrite the Host header.
+// To rewrite Host headers, use ReverseProxy directly with a custom
+// Director policy.
+
+//返回了一个结构体指针
+
+func NewSingleHostReverseProxy(target *url.URL) *ReverseProxy {
+    targetQuery := target.RawQuery
+    director := func(req *http.Request) {
+        req.URL.Scheme = target.Scheme
+        req.URL.Host = target.Host
+        req.URL.Path = singleJoiningSlash(target.Path, req.URL.Path)
+        if targetQuery == &quot;&quot; || req.URL.RawQuery == &quot;&quot; {
+            req.URL.RawQuery = targetQuery + req.URL.RawQuery
+        } else {
+            req.URL.RawQuery = targetQuery + &quot;&amp;&quot; + req.URL.RawQuery
+        }
+        if _, ok := req.Header[&quot;User-Agent&quot;]; !ok {
+            // explicitly disable User-Agent so it's not set to default value
+            req.Header.Set(&quot;User-Agent&quot;, &quot;&quot;)
+        }
+    }
+    return &amp;ReverseProxy{Director: director}
+}
+
+func copyHeader(dst, src http.Header) {
+    for k, vv := range src {
+        for _, v := range vv {
+            dst.Add(k, v)
+        }
+    }
+}
+
+// Hop-by-hop headers. These are removed when sent to the backend.
+// http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html
+var hopHeaders = []string{
+    &quot;Connection&quot;,
+    &quot;Proxy-Connection&quot;, // non-standard but still sent by libcurl and rejected by e.g. google
+    &quot;Keep-Alive&quot;,
+    &quot;Proxy-Authenticate&quot;,
+    &quot;Proxy-Authorization&quot;,
+    &quot;Te&quot;,      // canonicalized version of &quot;TE&quot;
+    &quot;Trailer&quot;, // not Trailers per URL above; http://www.rfc-editor.org/errata_search.php?eid=4522
+    &quot;Transfer-Encoding&quot;,
+    &quot;Upgrade&quot;,
+}
+
+func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+    transport := p.Transport
+    if transport == nil {
+        transport = http.DefaultTransport
+    }
+
+    ctx := req.Context()      //上下文是个什么神奇的东西
+
+    // For outgoing client requests, the context controls cancelation.
+    // For incoming server requests, the context is canceled when the
+    // client's connection closes, the request is canceled (with HTTP/2),
+    // or when the ServeHTTP method returns.
+
+    if cn, ok := rw.(http.CloseNotifier); ok {
+        var cancel context.CancelFunc
+        ctx, cancel = context.WithCancel(ctx)
+        defer cancel() //ServeHTTP method returns
+        notifyChan := cn.CloseNotify() //回调
+        go func() {
+            select {
+            case &lt;-notifyChan:
+                cancel()
+            case &lt;-ctx.Done():
+            }
+        }()
+    }
+
+    outreq := new(http.Request)
+    *outreq = *req // includes shallow copies of maps, but okay
+    if req.ContentLength == 0 {
+        outreq.Body = nil // Issue 16036: nil Body for http.Transport retries
+    }
+    outreq = outreq.WithContext(ctx)
+
+    p.Director(outreq)
+    outreq.Close = false
+
+    // We are modifying the same underlying map from req (shallow
+    // copied above) so we only copy it if necessary.
+    copiedHeaders := false
+
+    // Remove hop-by-hop headers listed in the &quot;Connection&quot; header.
+    // See RFC 2616, section 14.10.
+    if c := outreq.Header.Get(&quot;Connection&quot;); c != &quot;&quot; {
+        for _, f := range strings.Split(c, &quot;,&quot;) {
+            if f = strings.TrimSpace(f); f != &quot;&quot; {
+                if !copiedHeaders {
+                    outreq.Header = make(http.Header)
+                    copyHeader(outreq.Header, req.Header)
+                    copiedHeaders = true
+                }
+                outreq.Header.Del(f)
+            }
+        }
+    }
+
+    // Remove hop-by-hop headers to the backend. Especially
+    // important is &quot;Connection&quot; because we want a persistent
+    // connection, regardless of what the client sent to us.
+    for _, h := range hopHeaders {
+        if outreq.Header.Get(h) != &quot;&quot; {
+            if !copiedHeaders {
+                outreq.Header = make(http.Header)
+                copyHeader(outreq.Header, req.Header)
+                copiedHeaders = true
+            }
+            outreq.Header.Del(h)
+        }
+    }
+
+    if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+        // If we aren't the first proxy retain prior
+        // X-Forwarded-For information as a comma+space
+        // separated list and fold multiple headers into one.
+        if prior, ok := outreq.Header[&quot;X-Forwarded-For&quot;]; ok {
+            clientIP = strings.Join(prior, &quot;, &quot;) + &quot;, &quot; + clientIP
+        }
+        outreq.Header.Set(&quot;X-Forwarded-For&quot;, clientIP)
+    }
+
+    res, err := transport.RoundTrip(outreq)
+    if err != nil {
+        p.logf(&quot;http: proxy error: %v&quot;, err)
+        rw.WriteHeader(http.StatusBadGateway)
+        return
+    }
+
+    // Remove hop-by-hop headers listed in the
+    // &quot;Connection&quot; header of the response.
+    if c := res.Header.Get(&quot;Connection&quot;); c != &quot;&quot; {
+        for _, f := range strings.Split(c, &quot;,&quot;) {
+            if f = strings.TrimSpace(f); f != &quot;&quot; {
+                res.Header.Del(f)
+            }
+        }
+    }
+
+    for _, h := range hopHeaders {
+        res.Header.Del(h)
+    }
+
+    if p.ModifyResponse != nil {
+        if err := p.ModifyResponse(res); err != nil {
+            p.logf(&quot;http: proxy error: %v&quot;, err)
+            rw.WriteHeader(http.StatusBadGateway)
+            return
+        }
+    }
+
+    copyHeader(rw.Header(), res.Header)
+
+    // The &quot;Trailer&quot; header isn't included in the Transport's response,
+    // at least for *http.Transport. Build it up from Trailer.
+    if len(res.Trailer) &gt; 0 {
+        trailerKeys := make([]string, 0, len(res.Trailer))
+        for k := range res.Trailer {
+            trailerKeys = append(trailerKeys, k)
+        }
+        rw.Header().Add(&quot;Trailer&quot;, strings.Join(trailerKeys, &quot;, &quot;))
+    }
+
+    rw.WriteHeader(res.StatusCode)
+    if len(res.Trailer) &gt; 0 {
+        // Force chunking if we saw a response trailer.
+        // This prevents net/http from calculating the length for short
+        // bodies and adding a Content-Length.
+        if fl, ok := rw.(http.Flusher); ok {
+            fl.Flush()
+        }
+    }
+    p.copyResponse(rw, res.Body)
+    res.Body.Close() // close now, instead of defer, to populate res.Trailer
+    copyHeader(rw.Header(), res.Trailer)
+}
+
+func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
+    if p.FlushInterval != 0 {
+        if wf, ok := dst.(writeFlusher); ok {
+            mlw := &amp;maxLatencyWriter{
+                dst:     wf,
+                latency: p.FlushInterval,
+                done:    make(chan bool),
+            }
+            go mlw.flushLoop()
+            defer mlw.stop()
+            dst = mlw
+        }
+    }
+
+    var buf []byte
+    if p.BufferPool != nil {
+        buf = p.BufferPool.Get()
+    }
+    p.copyBuffer(dst, src, buf)
+    if p.BufferPool != nil {
+        p.BufferPool.Put(buf)
+    }
+}
+
+func (p *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int64, error) {
+    if len(buf) == 0 {
+        buf = make([]byte, 32*1024)
+    }
+    var written int64
+    for {
+        nr, rerr := src.Read(buf)
+        if rerr != nil &amp;&amp; rerr != io.EOF {
+            p.logf(&quot;httputil: ReverseProxy read error during body copy: %v&quot;, rerr)
+        }
+        if nr &gt; 0 {
+            nw, werr := dst.Write(buf[:nr])
+            if nw &gt; 0 {
+                written += int64(nw)
+            }
+            if werr != nil {
+                return written, werr
+            }
+            if nr != nw {
+                return written, io.ErrShortWrite
+            }
+        }
+        if rerr != nil {
+            return written, rerr
+        }
+    }
+}
+
+func (p *ReverseProxy) logf(format string, args ...interface{}) {
+    if p.ErrorLog != nil {
+        p.ErrorLog.Printf(format, args...)
+    } else {
+        log.Printf(format, args...)
+    }
+}
+
+type writeFlusher interface {
+    io.Writer
+    http.Flusher
+}
+
+type maxLatencyWriter struct {
+    dst     writeFlusher
+    latency time.Duration
+
+    mu   sync.Mutex // protects Write + Flush
+    done chan bool
+}
+
+func (m *maxLatencyWriter) Write(p []byte) (int, error) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    return m.dst.Write(p)
+}
+
+func (m *maxLatencyWriter) flushLoop() {
+    t := time.NewTicker(m.latency)
+    defer t.Stop()
+    for {
+        select {
+        case &lt;-m.done:
+            if onExitFlushLoop != nil {
+                onExitFlushLoop()
+            }
+            return
+        case &lt;-t.C:
+            m.mu.Lock()
+            m.dst.Flush()
+            m.mu.Unlock()
+        }
+    }
+}
+
+func (m *maxLatencyWriter) stop() { m.done &lt;- true }
+
+</code></pre>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-06-15-%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E7%94%A8go%E5%86%99%E4%BB%A3%E7%90%86/">
+        从零开始用Go写代理
+      </a>
+    </h1>
+
+    <span class="post-date">Thu, Jun 15, 2017</span>
+
+    
+
+<p>学习一门语言还是需要理论与实践相结合的，于是决定开始利用Go语言实现Proxy的功能。</p>
+
+<!--break-->
+
+<h4 id="1-需求分析"><strong>1.需求分析</strong></h4>
+
+<hr />
+
+<blockquote>
+<ul>
+<li>实现http协议的代理。</li>
+<li>高性能，高并发。</li>
+</ul>
+</blockquote>
+
+<p>大概写一个排期吧</p>
+
+<p>6-16 &ndash; 6-23 把基本的架子搭起来，实现访问代理，代理返回后台的数据。</p>
+
+<p>6-23 &ndash; 6-30 查看理论，进一步分析现有的功能，对第一期的代码重构。</p>
+
+<h4 id="2-理论分析"><strong>2.理论分析</strong></h4>
+
+<hr />
+
+<p>想到了自己比较常用的几款proxy。查了查，简单分析下：</p>
+
+<ol>
+<li>Nginx, Haproxy 反向代理：</li>
+</ol>
+
+<p>Client &lt;&ndash; &ndash;&gt; Nginx, Haproxy &lt;&ndash; &ndash;&gt; Server</p>
+
+<ol>
+<li>ShadowSocks</li>
+</ol>
+
+<p>Client &lt;&ndash; &ndash;&gt; (local ss client) &lt;&ndash; &ndash;&gt; (remote ss server) &lt;&ndash; &ndash;&gt; server</p>
+
+<hr />
+
+<p>我的目标是实现诸如Nginx与Haproxy的反向代理。</p>
+
+<p>从配置文件中可以看出，将请求导入到代理之后，根据host名以及url来做导向。</p>
+
+<p>刚才想到一点，可以不解析body，根据head就可以确定导向。</p>
+
+<h4 id="3-实践部分"><strong>3. 实践部分</strong></h4>
+
+<p>6.16  完成了初步的框架。一个请求可以转接。</p>
+
+<pre><code>有一个问题：
+问题背景： 
+server: 监听8081端口，有请求时返回字符串 &quot;hello&quot;
+proxy: 监听8080端口，外界的请求到达时，启动go程，go程内去构建新的请求，去8081访问，并写结果。
+client: 采用wrk模式，并发1000个。
+
+报错：
+
+go程内client.do函数：
+error: Get http://192.168.177.128:8081: dial tcp 192.168.177.128:8081: socket: too many open files
+proxy本身：
+2017/06/16 08:32:42 http: Accept error: accept tcp [::]:8080: accept4: too many open files; retrying in 10ms
+
+
+刚才发现不同的shell中ulimit 不一样。
+
+首先，可以确定：
+1. wrk中使用了 1000个 套接字,利用这1000个 Fd 不停的发送请求。
+2. proxy 使用了1个监听 8080 端口。 
+    http.Client并没有建立请求，所以，实际是 来一个request, Go程就得 调用dial即connect一次
+    Client结构体文档说有缓存http请求。这点不明确，需要再查询。
+3. server 使用了1个监听8081 端口。当 accept 时，accept一个，内核也得建立新的 open file.
+    这些应该是不断增加的，目前不确定是不是及时关掉了。
+
+
+1. 验证不同的shell中限制不一样。
+
+ 之前默认是1024. 
+
+ ulimit -n 分别修改了 proxy 之后，wrk 之后，二者不再显示错误。然而 server 出现了 accept 错误。
+    
+ 也就是通过增大open file数量，可以解决问题，然而上面提到的问题还没有确定。
+
+/******增加ulimit 方法***
+/etc/security/limits.conf  增加： du hard nofile 10000  //系统限制
+~/.bash_profile  增加：ulimit -n 10000                  //该用户每次登陆shell执行ulimit.
+***********************/
+
+/********增加的代码**
+不再使用默认的配置文件，Client的配置文件
+var tr *http.Transport = &amp;http.Transport{
+            Dial: (&amp;net.Dialer{
+                Timeout:   30 * time.Second,
+                KeepAlive: 30 * time.Second,
+            }).Dial,
+            DisableKeepAlives : false,  
+            
+            //这个值就是关键，含义是：保持长链接的TCP连接个数。不设置默认为2.
+            MaxIdleConnsPerHost : 1000,  
+}
+*****************/
+var client *http.Client = &amp;http.Client{Transport: tr}
+
+结果： 5000并发无压力。
+[du@localhost ~]$ wrk -t4 -c5000 -d3s http://127.0.0.1:8080
+Running 3s test @ http://127.0.0.1:8080
+  4 threads and 5000 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   177.49ms   50.95ms 447.81ms   73.99%
+    Req/Sec     3.44k     1.84k    7.03k    64.55%
+  40019 requests in 3.05s, 5.00MB read
+Requests/sec:  13132.85
+Transfer/sec:      1.64MB
+</code></pre>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-06-05-go%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F%E5%88%86%E6%9E%90%E5%8F%8A%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95/">
+        Go内存泄漏分析及解决办法
+      </a>
+    </h1>
+
+    <span class="post-date">Mon, Jun 5, 2017</span>
+
+    
+
+<p>文章将展示常见的Goroutine leak以及对应的解决办法。</p>
+
+<!--break-->
+
+<p>Talk is cheap, I will show you the code.</p>
+
+<h4 id="各种泄露的展示"><strong>各种泄露的展示</strong></h4>
+
+<p><a href="http://openmymind.net/Leaking-Goroutines/">第一段代码来源</a></p>
+
+<pre><code>type Writer struct {
+  queue chan []byte
+}
+
+func NewWriter() *Writer {
+  w := &amp;Writer{
+    queue: make(chan []byte, 10),
+  }
+  go w.process()
+  return w
+}
+
+func (w *Writer) Write(message []byte) {
+  w.queue &lt;- message
+}
+
+func (w *Writer) process() {
+  for {
+    message := &lt;- w.queue
+    // do something with message
+  }
+}
+
+func main() {
+  fmt.Println(runtime.NumGoroutine()) 
+  test()
+  fmt.Println(runtime.NumGoroutine())
+}
+
+func test() {
+  NewWriter()
+}
+</code></pre>
+
+<p>test中执行的NewWriter消失在了上下文里，Go程则存在于后台，造成了泄露。</p>
+
+<p><a href="http://www.itwendao.com/article/detail/217770.html">第二段代码,做了一些增加</a></p>
+
+<pre><code>package main
+import (
+    &quot;fmt&quot;
+    &quot;math/rand&quot;
+    &quot;time&quot;
+)
+
+func queryFromSrc(src string) (ret string) {
+    time.Sleep(1000)
+    ret = fmt.Sprintf(&quot;query done&quot;)
+    return ret
+}
+
+func multiQuery() (ret string) {
+    res := make(chan string)
+    go func() {
+        temp := make(chan int)
+        num := &lt;- temp
+        fmt.Printf(&quot;get num %d \n&quot;,num) 
+    }()
+    go func() {
+        res &lt;- queryFromSrc(&quot;ns2.dnsserver.com&quot;)
+    }()
+    return &quot;hello&quot;
+}
+
+func main() {
+    fmt.Println(&quot;start multi query:&quot;)
+    res := multiQuery()
+    fmt.Println(&quot;res=&quot;, res)
+}
+</code></pre>
+
+<p>上述的代码一共有两处导致内存泄露的部分：</p>
+
+<p>第18行：从一个没有输入的管道中阻塞读取数据</p>
+
+<p>第22行：向一个没有接收的管道中写入数据阻塞。</p>
+
+<p>以上都会造成内存泄漏，总结可以得出：
+&gt; * Go程想从一个通道读数据，但通道没有写入数据。
+&gt; * Go程想往一个通道写数据，但是这个通道没有接收方，该Go程将阻塞无法向下执行
+&gt; * 综合上述两种情况，如本文的第一段代码，Go程内形成闭环，与外部隔绝。</p>
+
+<h4 id="解决办法"><strong>解决办法</strong></h4>
+
+<p>1.增加管道缓存</p>
+
+<p>上述第二段代码中，第22行的问题，如果，15行的代码变成res := make(chan string, 1),则不会写阻塞。最终数据会写入缓存管道，依靠Gc回收。</p>
+
+<p>2.增加读超时处理</p>
+
+<p>针对第18行的问题，展示一种超时处理：</p>
+
+<pre><code>go func() {
+    defer done(0)
+    temp := make(chan int)
+    select {
+        case num := &lt;- temp:         //正常的接收
+            fmt.Printf(&quot;%d \n&quot;,num)
+        case &lt;- time.After(1) :      //触发了超时
+            fmt.Printf(&quot;time done stop 0 \n&quot;)
+    }
+}()
+
+</code></pre>
+
+<p>3.生产者close生产管道，在消费的Go程内部使用for range形式，遇到close会跳出循环。</p>
+
+<p>4.全局的关闭管道, 可以做错误处理，下文的select, 当在外部因为任何原因关闭 in 时， select中in 会被触发。</p>
+
+<pre><code>package main
+
+import (
+    &quot;fmt&quot;
+    &quot;time&quot;
+    &quot;runtime&quot;
+)
+
+
+func test(in &lt;- chan int, i int) {
+    // 模拟的是close 关闭的情况
+    for my := range in {        
+        fmt.Printf(&quot; %d is shut down \n&quot;, my)
+    }
+    fmt.Printf(&quot;out %d is shut down \n&quot;, i)
+    
+    /*
+    // 模拟外部关闭的情况，in此时可以看作统一的退出管道。
+    select {
+        case  &lt;- in:
+            fmt.Printf(&quot; %d is shut down \n&quot;, i)
+            return
+    }
+    */
+}
+
+func main() {
+    in := make(chan int)
+    for i := 0; i &lt; 10; i++ {
+        go test(in, i)
+    }
+    fmt.Println(runtime.NumGoroutine())
+    close(in)
+    time.Sleep(10000)
+    fmt.Println(runtime.NumGoroutine())
+}
+</code></pre>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-06-03-go%E4%BD%BF%E7%94%A8channel%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/">
+        Go：使用channel共享内存
+      </a>
+    </h1>
+
+    <span class="post-date">Sat, Jun 3, 2017</span>
+
+    <p>Go的口号：不要通过共享内存来通信，而应通过通信来共享内存</p>
+
+<!--break-->
+
+<p>Talk is cheap, I will show you the code.</p>
+
+<pre><code>func main() {
+    c1 := make(chan int)
+    quit := make(chan int)
+    test := 0
+    a := [...]int{1, 2, 3}
+    for _, v := range a {
+        go func(v int) {
+            for {
+                select {
+                case my := &lt;-c1:
+                    my++
+                    fmt.Printf(&quot;id: %d now count is %d \n&quot;, v, my)
+                    c1 &lt;- my
+                case &lt;-quit:
+                    fmt.Printf(&quot;id: %d return \n&quot;, v)
+                    return
+                }
+            }
+        }(v)
+    }
+    c1 &lt;- test
+    time.Sleep(5000)
+    fmt.Printf(&quot;we get the count: %d \n&quot;, test)
+    for _, v := range a {
+        quit &lt;- v
+    }
+    fmt.Printf(&quot;all is over \n&quot;)
+    return
+    //panic(&quot;hello&quot;)
+}
+
+</code></pre>
+
+<p>如代码所示，3个Go程对test进行计数。使用c1传递消息，使用quit传递退出消息。</p>
+
+<p>这段代码有一个问题。
+在调试过程中，出现了以下的错误信息。</p>
+
+<pre><code>id: 1 now count is 495 
+id: 2 now count is 496 
+id: 3 now count is 497 
+id: 1 return 
+id: 2 return 
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan send]:
+main.main()
+    /home/du/go-learning/test.go:33 +0x1e4
+
+goroutine 7 [chan send]:
+main.main.func1(0xc42006a060, 0xc42006a0c0, 0x3)
+    /home/du/go-learning/test.go:22 +0x1c7
+created by main.main
+    /home/du/go-learning/test.go:27 +0x11a
+exit status 2
+</code></pre>
+
+<p>可以看出，goroutine 1，7 分别卡在了发送上。即</p>
+
+<pre><code>13行： c1 &lt;- my
+25行： quit &lt;- v
+</code></pre>
+
+<p>非缓冲的chan必须接收方和发送方都准备好，才能实现通信。
+当ID为1，2的Go程退出后，c1没有接收方了，因此死锁。
+最后一个quit也没有接收方，因此死锁。</p>
+
+<p>刚开始，主Go程给c1中发送数据test，使整个流程流动起来，最终也要拿出test,终止流程。</p>
+
+<pre><code>    c1 &lt;- test  
+    time.Sleep(5000)
+    test  = &lt;-c1   //增加的代码
+
+最终输出：
+    id: 3 now count is 1 
+    id: 1 now count is 2 
+    id: 3 now count is 3 
+    id: 1 now count is 4 
+    id: 2 now count is 5 
+    we get the count: 5 
+    all is over
+</code></pre>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-06-02-%E5%AE%9E%E6%95%88go%E7%BC%96%E7%A8%8B%E7%AE%80%E6%9E%90/">
+        实效Go编程简析
+      </a>
+    </h1>
+
+    <span class="post-date">Fri, Jun 2, 2017</span>
+
+    
+
+<p><a href="https://go-zh.org/doc/effective_go.html">Effective Go</a>是关于如何写出高效Go程序的文档。</p>
+
+<!--break-->
+
+<h4 id="分号"><strong>分号</strong></h4>
+
+<hr />
+
+<p>Go中的分号不在源码中出现，由词法分析器自动添加。当然If, For中自己写的。
+规则是这样的：若在新行前的最后一个标记为标识符（包括 int 和 float64 这类的单词）、数值或字符串常量之类的基本字面或以下标记之一</p>
+
+<pre><code>break continue fallthrough return ++ -- ) }
+
+so:
+
+if i &lt; f()  // 错！
+{           // 该行行首会被增加一个分号
+    g()
+}
+
+</code></pre>
+
+<h4 id="重新声明与重复赋值"><strong>重新声明与重复赋值</strong></h4>
+
+<hr />
+
+<p>Go中的短声明 := 的使用。</p>
+
+<pre><code>f, err := os.Open(name)
+
+(some other code...)
+
+d, err := f.Stat()
+
+</code></pre>
+
+<p>在上述的代码段中，err 在第一条语句中被声明，在第二次被<strong>重新赋值</strong>。</p>
+
+<p>以声明的变量v可以再次出现在 := 有几个条件：</p>
+
+<blockquote>
+<ul>
+<li>本次声明和已声明的err处于同一作用域。</li>
+<li>类型与之前的类型相应。</li>
+<li>在此次声明中至少有一个新声明的变量，如d.</li>
+</ul>
+</blockquote>
+
+<h4 id="for与switch"><strong>For与Switch</strong></h4>
+
+<hr />
+
+<p>注意，此处和C语言中的Goto不一样，标识符只能放在For或者Switch外面。
+中间不能有其他语句，否则会报错。
+执行效果是跳出当前的For或者Switch语句块，本次不会再重复进入。</p>
+
+<p>如下所示，Here1,Here2分别为for和Switch工作，互不影响。</p>
+
+<pre><code>//第一段代码
+Here1:
+    for v := a[0]; v &lt; 5; v++ {
+        fmt.Println(&quot;for comming&quot;, v)
+        if v == 3 {
+            fmt.Printf(&quot;v==2 %+v \n&quot;, a)
+            break Here1
+        }
+    Here2:
+        switch {
+        case m == 1:
+            fmt.Printf(&quot;%+v \n&quot;, a)
+            m = 2
+            break Here2
+        case m == 2:
+            fmt.Printf(&quot;we get 2&quot;)
+        }
+        fmt.Printf(&quot;end : %+v \n&quot;, a)
+    }
+    return
+</code></pre>
+
+<p>switch还存在一个利用断言，动态判断接口类型的语法，如下</p>
+
+<pre><code>//第二段代码
+
+    var t interface{}
+    t = 8888
+    switch v := t.(type) {
+    default:
+        fmt.Printf(&quot;unexpected type %T \n&quot;, t) // %T 输出 t 是什么类型
+    case bool:
+        fmt.Printf(&quot;boolean %t\n&quot;, t) // t 是 bool 类型
+    case int:
+        fmt.Printf(&quot;integer %d\n&quot;, t) // t 是 int 类型
+        fmt.Printf(&quot;integer %d\n&quot;, v) // t 是 int 类型
+    case *bool:
+        fmt.Printf(&quot;pointer to boolean %t\n&quot;, *v) // t 是 *bool 类型
+    case *int:
+        fmt.Printf(&quot;pointer to integer %d\n&quot;, *v) // t 是 *int 类型
+    }
+
+</code></pre>
+
+<h4 id="可命名结果形参与defer"><strong>可命名结果形参与Defer</strong></h4>
+
+<hr />
+
+<blockquote>
+<ul>
+<li>Go函数的返回值或结果“形参”可被命名，并作为常规变量使用，就像传入的形参一样。</li>
+<li>命名后，一旦该函数开始执行，它们就会被初始化为与其类型相应的零值；</li>
+<li>若该函数执行了一条不带实参的 return 语句，则结果形参的当前值将被返回。</li>
+</ul>
+</blockquote>
+
+<p>当可命名形参与Defer碰到一起，又会有不一样的问题。具体请看<a href="http://www.zenlife.tk/golang-defer.md">Go语言的defer，你真的懂了吗</a></p>
+
+<p>由官网的例子，Defer函数的实参（如果该函数为方法则还包括接收者）在推迟执行时就会求值， 而不是在调用执行时才求值。所以，可以由这个特性来监控另一个函数的进入和退出。</p>
+
+<h4 id="new与make"><strong>New与Make</strong></h4>
+
+<hr />
+
+<pre><code>type test struct {             
+    one int                    
+    two bool                   
+    three []int                
+} 
+  
+func main() {                  
+    first := new(test)         
+    second := make([]test,1)   
+    third := new([]bool)       
+    fourth := make([]bool,1)   
+    fifth := new(bool)
+    sixth := make([]bool,1)
+    fmt.Printf(&quot;%+v  \n%+v \n%+v \n%+v \n%+v \n%+v \n&quot;, *first, second, *third, fourth, *fifth, sixth)
+}   
+
+结果是：
+{one:0 two:false three:[]}  //新声明的类型，除了切片都置零（bool类型的0就是false）。
+[{one:0 two:false three:[]}]  //初始化了，0 和 false， 但是内层的切片未初始化。
+[]         // 返回的是一个指向nil的空指针
+[false]    // 返回的是初始化之后的 bool 切片
+false      // 内置类型置零，就是false
+[false]    // 返回初始化资源后的 test 切片
+</code></pre>
+
+<p>首先，明确的第一点：new返回的是指针，make返回的是object本身。</p>
+
+<p>new: 可以对确定类型的一个对象置零,对slice, map, channel等无用。</p>
+
+<p>make: 只能对slice, map, channel操作，初始化。</p>
+
+<p>因此，针对官网的置零与初始化的差别：对于普通的类型，new和make都可以完成初始化，但是对于slice, channel, map这三个“本质上为引用数据类型”,只能使用make.</p>
+
+<h4 id="二维切片"><strong>二维切片</strong></h4>
+
+<hr />
+
+<p>和C语言的多维数组相同的原理，一共有两种初始化的方法：一次申请再重新分配和多次申请。</p>
+
+<pre><code>const (
+    x = 2
+    y = 4
+)
+
+func main() {
+    picture := make([][]int, x)     // picture[x][y]。    
+    /*
+    test := make([]int,x * y)
+    for i:= range picture {
+        picture[i], test= test[:y], test[y:] //这招，太神奇。切片的magic.
+    }
+    */
+    for i := range picture {
+        picture[i] = make([]int, y)
+    }
+    fmt.Printf(&quot;%+v \n&quot;,picture)
+}
+
+输出都是：
+[[0 0 0 0] [0 0 0 0]]
+</code></pre>
+
+<h4 id="映射"><strong>映射</strong></h4>
+
+<hr />
+
+<p>没有定义相等的数据类型不能用作映射的键。</p>
+
+<h4 id="打印"><strong>打印</strong></h4>
+
+<p>有一个坑需要注意：</p>
+
+<pre><code>type MyString string
+
+func (m MyString) String() string {
+    return fmt.Sprintf(&quot;MyString=%s&quot;, m) // 错误：会无限递归
+}
+</code></pre>
+
+<p>如果以以 %f 调用了Sprintf，它并不是一种字符串格式：Sprintf 只会在它需要字符串时才调用 String 方法，而 %f 需要一个浮点数值。</p>
+
+<h4 id="枚举器-iota"><strong>枚举器 iota</strong></h4>
+
+<hr />
+
+<p>iota可以做表达式的一部分，该表达式隐式重复，可以表达更复杂的枚举，比C更强大。</p>
+
+<pre><code>const (
+    _ = iota  // 忽略第一个0
+    x         // 即x = iota
+    y         // 即y = iota
+)
+
+结果：x = 1, y = 2
+</code></pre>
+
+<h4 id="指针与值"><strong>指针与值</strong></h4>
+
+<hr />
+
+<blockquote>
+<ul>
+<li><p>值方法可通过指针和值调用，执行效果都是值方法。</p></li>
+
+<li><p>指针方法只能通过指针来调用。如果值是可寻址的，则编译器自动将值调用指针方法转为地址调用。执行效果是指针方法。</p></li>
+</ul>
+</blockquote>
+
+<p>总的来说，编译器会帮助coder保持值调用或者指针调用的效果。</p>
+
+<h4 id="断言与接口类型"><strong>断言与接口类型</strong></h4>
+
+<hr />
+
+<pre><code>type Stringer interface {
+    String() string
+}
+
+var value interface{} // 调用者提供的值。
+switch str := value.(type) {
+case string:
+    return str
+case Stringer:
+    return str.String()
+}
+
+//等价于以下的代码
+if str, ok := value.(string); ok {   //不采用这种ok形式的话，如果断言失败，程序会崩。
+    return str
+} else if str, ok := value.(Stringer); ok {
+    return str.String()
+}
+</code></pre>
+
+<h4 id="接口内嵌与结构体继承"><strong>接口内嵌与结构体继承</strong></h4>
+
+<hr />
+
+<p><a href="http://www.zenlife.tk/interface-vs-embedding.md">Go中接口与继承的选择</a>这部分的主要内容来自这里。</p>
+
+<p>结论是:“为了不重写代码，必须使用继承。而为了存储抽象类型，调用具体类型的方法，必须用接口。”</p>
+
+<pre><code>const (
+    PARENT      = iota
+    CHILD
+    GRANDCHILD
+)
+
+type object  int 
+
+type ObjectInterface interface {       // object类的接口
+    ObjectClass() int 
+}
+
+func (test *object) add() int {
+        a := int(*test)
+        a++ 
+        *test = object(a)
+        return a
+}
+
+func (test object) ObjectClass() int { // object类的方法
+    return PARENT
+}
+
+type child struct {                    // child 继承 object
+    object
+}
+
+func (my child) ObjectClass() int {    // child 实现Object 接口
+    return CHILD
+}
+
+func (my child) add2() int {           // child 类的方法
+    a := int(my.object)
+    a++
+    return a
+}
+
+type ChildInterface interface {        // child 接口
+    ObjectInterface
+    ChildClass() int
+}
+
+type grandchild struct {               // grandchild 继承 child
+    child
+}
+
+func (my grandchild) ObjectClass()int{ // grand 继承 child 之后，是不用实现ObjectClass()
+    return GRANDCHILD                  // 但是会返回child。因此单独实现。              
+}
+
+func (my grandchild) ChildClass()int { // 实现了child 接口。
+    return GRANDCHILD
+}
+
+func main() {
+    first   := object(0)
+    second  := child{first}
+    third   := grandchild{second}
+
+    fmt.Printf(&quot;add: %d \n&quot;,third.add())
+    fmt.Printf(&quot;add: %d \n&quot;,third.add())
+    fmt.Printf(&quot;add: %d \n&quot;,third.add2())
+    fmt.Printf(&quot;ObjectClass: %d \n&quot;,third.ObjectClass())
+
+    if _, ok := interface{}(third).(ObjectInterface); ok {
+        fmt.Printf(&quot;first have \n&quot;)
+    }
+    if _, ok := interface{}(third).(ChildInterface); ok {
+        fmt.Printf(&quot;second have \n&quot;)
+    }
+}
+
+输出是：
+add: 1 
+add: 2 
+add: 3 
+ObjectClass: 2 
+first have 
+second have
+</code></pre>
+
+<blockquote>
+<ul>
+<li>未完待续</li>
+</ul>
+</blockquote>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/about/">
+        About
+      </a>
+    </h1>
+
+    <span class="post-date">Fri, May 12, 2017</span>
+
+    <p>喜欢C语言，喜欢Unix以及Unix的文化</p>
+
+<p>正在学习Go.</p>
+
+<p>希望自己能越来越厉害</p>
+
+<p>2017-5-12 0:38 于北京</p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-05-12-start-wrk/">
+        wrk压测工具简析
+      </a>
+    </h1>
+
+    <span class="post-date">Fri, May 12, 2017</span>
+
+    
+
+<p><a href="https://github.com/wg/wrk">Wrk</a>是一款高性能的基于Linux平台的压测工具。</p>
+
+<!--break-->
+
+<h4 id="1-基础功能">1.基础功能</h4>
+
+<hr />
+
+<p>命令是：</p>
+
+<pre><code>wrk -t12 -c400 -d30s http://127.0.0.1:8080/index.html
+
+-t : 线程数
+-c : http连接总数。
+-d : 测试时长。
+-s : lua脚本参数
+
+</code></pre>
+
+<h4 id="2-简单分析">2.简单分析</h4>
+
+<hr />
+
+<p>wrk主要是</p>
+
+<blockquote>
+<ul>
+<li>基于redis的<em>ae模块</em>, 提供异步框架。</li>
+<li>nginx的httpparser, 提供http的请求解析。</li>
+<li>lua脚本，利用Lua的创建更复杂的测试用例。</li>
+</ul>
+</blockquote>
+
+<h4 id="3-简单使用">3.简单使用</h4>
+
+<p><a href="http://www.cnblogs.com/xinzhao/p/6233009.html">Http压测工具wrk使用指南</a></p>
+
+<p><a href="http://zjumty.iteye.com/blog/2221040">wrk &ndash; 小巧轻盈的 http 性能测试工具.</a></p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-05-11-first/">
+        开始技术博客
+      </a>
+    </h1>
+
+    <span class="post-date">Mon, May 1, 2017</span>
+
+    <p>我的第一篇 github 博客, 本博客使用 <a href="http://jekyll.bootcss.com/">jekyll</a> + <a href="http://v3.bootcss.com">bootstrap</a> 搭建!</p>
+
+<!--break-->
+
+<p>感谢 <a href="https://github.com">github</a> 提供的 Github Pages 功能!</p>
+
+<p>此博客布局参考了 <a href="http://www.monkeysnatchbanana.com/">Monkey Snatch Banana</a> 博客</p>
+
+<p>个人页面应用了 <a href="http://ddbullfrog.github.io/resumecard/">resumecard</a> 项目</p>
+
+<p>本项目Fork自<a href="https://liungkejin.github.io/">liungkejin</a>，在此特别感谢。</p>
+
+<pre><code class="language-bash">echo &quot;你好, Github Pages!&quot;;
+</code></pre>
+
+  </div>
+  
+</div>
+</div>
+
+  </body>
+</html>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Golang on Diamondu</title>
+    <link>https://wuhang-du.github.io/categories/golang/</link>
+    <description>Recent content in Golang on Diamondu</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 25 Jun 2017 08:36:54 +0000</lastBuildDate>
+    
+	<atom:link href="https://wuhang-du.github.io/categories/golang/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Go: Context 理解</title>
+      <link>https://wuhang-du.github.io/post/2017-06-25-gocontext%E7%90%86%E8%A7%A3/</link>
+      <pubDate>Sun, 25 Jun 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-06-25-gocontext%E7%90%86%E8%A7%A3/</guid>
+      <description>在看proxy的时候，看到了context这个package.
+ source 1: Package context
+Incoming requests to a server should create a Context, and outgoing calls to servers should accept a Context &amp;gt; * 对于，访问本服务器的Incoming 请求应该建立一个Context. &amp;gt; * 对于，从本服务器访问其他服务器的Outgoing 请求应该接收Context.  下面的链接中包含了创建一个context的代码。
+source 2: Go Concurrency Patterns: Context
+WithCancel WithDeadline WithTimeout WithValue 以上函数根据不同的含义，分别返回parent Context的child Context。 package main import ( &amp;quot;context&amp;quot; &amp;quot;fmt&amp;quot; &amp;quot;time&amp;quot; ) func main() { d := time.Now().Add(50 * time.Millisecond) ctx, cancel := context.WithDeadline(context.Background(), d) // Even though ctx will be expired, it is good practice to call its // cancelation function in any case.</description>
+    </item>
+    
+    <item>
+      <title>Go：ReverProxy.Go 代码理解</title>
+      <link>https://wuhang-du.github.io/post/2017-06-19-reverproxy.go-%E4%BB%A3%E7%A0%81%E7%90%86%E8%A7%A3/</link>
+      <pubDate>Mon, 19 Jun 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-06-19-reverproxy.go-%E4%BB%A3%E7%A0%81%E7%90%86%E8%A7%A3/</guid>
+      <description>对使用GO语言实现反向代理的几种技术的理解与分析
+ Talk is cheap, I will show you the code.
+通过阅读代码，一共看到了几种实现代理的方法
+ io.copy
+ http.Client
+ reverseProxy
+   package httputil import ( &amp;quot;context&amp;quot; &amp;quot;io&amp;quot; &amp;quot;log&amp;quot; &amp;quot;net&amp;quot; &amp;quot;net/http&amp;quot; &amp;quot;net/url&amp;quot; &amp;quot;strings&amp;quot; &amp;quot;sync&amp;quot; &amp;quot;time&amp;quot; ) var onExitFlushLoop func() //函数式编程的写法 //这是一个结构体，可继承 type ReverseProxy struct { Director func(*http.Request) // If nil, http.DefaultTransport is used. // RoundTripper是一种类型，&amp;amp;Transport Transport http.RoundTripper // FlushInterval specifies the flush interval // to flush to the client while copying the // response body.</description>
+    </item>
+    
+    <item>
+      <title>从零开始用Go写代理</title>
+      <link>https://wuhang-du.github.io/post/2017-06-15-%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E7%94%A8go%E5%86%99%E4%BB%A3%E7%90%86/</link>
+      <pubDate>Thu, 15 Jun 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-06-15-%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E7%94%A8go%E5%86%99%E4%BB%A3%E7%90%86/</guid>
+      <description>学习一门语言还是需要理论与实践相结合的，于是决定开始利用Go语言实现Proxy的功能。
+ 1.需求分析   实现http协议的代理。 高性能，高并发。   大概写一个排期吧
+6-16 &amp;ndash; 6-23 把基本的架子搭起来，实现访问代理，代理返回后台的数据。
+6-23 &amp;ndash; 6-30 查看理论，进一步分析现有的功能，对第一期的代码重构。
+2.理论分析 想到了自己比较常用的几款proxy。查了查，简单分析下：
+ Nginx, Haproxy 反向代理：  Client &amp;lt;&amp;ndash; &amp;ndash;&amp;gt; Nginx, Haproxy &amp;lt;&amp;ndash; &amp;ndash;&amp;gt; Server
+ ShadowSocks  Client &amp;lt;&amp;ndash; &amp;ndash;&amp;gt; (local ss client) &amp;lt;&amp;ndash; &amp;ndash;&amp;gt; (remote ss server) &amp;lt;&amp;ndash; &amp;ndash;&amp;gt; server
+我的目标是实现诸如Nginx与Haproxy的反向代理。
+从配置文件中可以看出，将请求导入到代理之后，根据host名以及url来做导向。
+刚才想到一点，可以不解析body，根据head就可以确定导向。
+3. 实践部分 6.16 完成了初步的框架。一个请求可以转接。
+有一个问题： 问题背景： server: 监听8081端口，有请求时返回字符串 &amp;quot;hello&amp;quot; proxy: 监听8080端口，外界的请求到达时，启动go程，go程内去构建新的请求，去8081访问，并写结果。 client: 采用wrk模式，并发1000个。 报错： go程内client.do函数： error: Get http://192.</description>
+    </item>
+    
+    <item>
+      <title>Go内存泄漏分析及解决办法</title>
+      <link>https://wuhang-du.github.io/post/2017-06-05-go%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F%E5%88%86%E6%9E%90%E5%8F%8A%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95/</link>
+      <pubDate>Mon, 05 Jun 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-06-05-go%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F%E5%88%86%E6%9E%90%E5%8F%8A%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95/</guid>
+      <description>文章将展示常见的Goroutine leak以及对应的解决办法。
+ Talk is cheap, I will show you the code.
+各种泄露的展示 第一段代码来源
+type Writer struct { queue chan []byte } func NewWriter() *Writer { w := &amp;amp;Writer{ queue: make(chan []byte, 10), } go w.process() return w } func (w *Writer) Write(message []byte) { w.queue &amp;lt;- message } func (w *Writer) process() { for { message := &amp;lt;- w.queue // do something with message } } func main() { fmt.</description>
+    </item>
+    
+    <item>
+      <title>Go：使用channel共享内存</title>
+      <link>https://wuhang-du.github.io/post/2017-06-03-go%E4%BD%BF%E7%94%A8channel%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/</link>
+      <pubDate>Sat, 03 Jun 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-06-03-go%E4%BD%BF%E7%94%A8channel%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/</guid>
+      <description>Go的口号：不要通过共享内存来通信，而应通过通信来共享内存
+ Talk is cheap, I will show you the code.
+func main() { c1 := make(chan int) quit := make(chan int) test := 0 a := [...]int{1, 2, 3} for _, v := range a { go func(v int) { for { select { case my := &amp;lt;-c1: my++ fmt.Printf(&amp;quot;id: %d now count is %d \n&amp;quot;, v, my) c1 &amp;lt;- my case &amp;lt;-quit: fmt.Printf(&amp;quot;id: %d return \n&amp;quot;, v) return } } }(v) } c1 &amp;lt;- test time.</description>
+    </item>
+    
+    <item>
+      <title>实效Go编程简析</title>
+      <link>https://wuhang-du.github.io/post/2017-06-02-%E5%AE%9E%E6%95%88go%E7%BC%96%E7%A8%8B%E7%AE%80%E6%9E%90/</link>
+      <pubDate>Fri, 02 Jun 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-06-02-%E5%AE%9E%E6%95%88go%E7%BC%96%E7%A8%8B%E7%AE%80%E6%9E%90/</guid>
+      <description>Effective Go是关于如何写出高效Go程序的文档。
+ 分号 Go中的分号不在源码中出现，由词法分析器自动添加。当然If, For中自己写的。 规则是这样的：若在新行前的最后一个标记为标识符（包括 int 和 float64 这类的单词）、数值或字符串常量之类的基本字面或以下标记之一
+break continue fallthrough return ++ -- ) } so: if i &amp;lt; f() // 错！ { // 该行行首会被增加一个分号 g() }  重新声明与重复赋值 Go中的短声明 := 的使用。
+f, err := os.Open(name) (some other code...) d, err := f.Stat()  在上述的代码段中，err 在第一条语句中被声明，在第二次被重新赋值。
+以声明的变量v可以再次出现在 := 有几个条件：
+  本次声明和已声明的err处于同一作用域。 类型与之前的类型相应。 在此次声明中至少有一个新声明的变量，如d.   For与Switch 注意，此处和C语言中的Goto不一样，标识符只能放在For或者Switch外面。 中间不能有其他语句，否则会报错。 执行效果是跳出当前的For或者Switch语句块，本次不会再重复进入。
+如下所示，Here1,Here2分别为for和Switch工作，互不影响。
+//第一段代码 Here1: for v := a[0]; v &amp;lt; 5; v++ { fmt.</description>
+    </item>
+    
+    <item>
+      <title>开始技术博客</title>
+      <link>https://wuhang-du.github.io/post/2017-05-11-first/</link>
+      <pubDate>Mon, 01 May 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-05-11-first/</guid>
+      <description>我的第一篇 github 博客, 本博客使用 jekyll + bootstrap 搭建!
+ 感谢 github 提供的 Github Pages 功能!
+此博客布局参考了 Monkey Snatch Banana 博客
+个人页面应用了 resumecard 项目
+本项目Fork自liungkejin，在此特别感谢。
+echo &amp;quot;你好, Github Pages!&amp;quot;;  </description>
+    </item>
+    
+  </channel>
+</rss>
