@@ -1,0 +1,103 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>我的Git之旅 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/about/">About</a> </li>
+      
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>我的Git之旅</h1>
+			  <span class="post-date">Wed ,Jul 26 ,2017</span>
+			      <pre><code class="language-bash">echo &quot;你好, Git!&quot;;
+</code></pre>
+
+<p>git remote 命令，定义远端的主机。这个远端，可以是另外一台机器，最常用的就是github</p>
+
+<p>使用git remote -v 就可以显示本地当前仓库的远程主机。</p>
+
+<pre><code>         git remote add [name] [url]
+example: git remote add origin https://github.com/wuhang-du/leetcode
+</code></pre>
+
+<p>git merge 命令，即合并，主要提一下 &ndash;no-ff的使用。</p>
+
+<p>示例当前的分支是：master</p>
+
+<p>调用操作之后使用tig 查看当前的状态：</p>
+
+<pre><code>git merge develop
+
+2017-07-26 11:32 du   [develop] [master] Merge branch 'develop'
+
+结果：master指向了develop,变成了新的master.此时master与 develop 状态相同。
+
+git merge develop --no-ff
+
+2017-07-26 11:32 du   M   [master] Merge branch 'develop'
+                        |
+2017-07-26 11:31 du   | o [develop] test
+                        |
+2017-07-26 11:28 du   M   update
+
+结果：master与develop合并，生成了新的master,此状态超前 develop 一次。
+</code></pre>
+
+<p>git pull 是从远程主机拉取变化，并更新本地的命令。</p>
+
+<p>平常的使用中因为已经设置了默认的主机，会省略一些字段。具体情况具体对待。</p>
+
+<p>还有一些参数，比如设置拉取远程仓库所有的分支等等。</p>
+
+<pre><code>git pull &lt;远程主机名&gt; &lt;远程分支名&gt;:&lt;本地分支名&gt;
+
+git push origin master:master
+</code></pre>
+
+			</div>
+		</div>
+		
+  </body>
+</html>
