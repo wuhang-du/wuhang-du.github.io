@@ -44,11 +44,13 @@ wrk &amp;ndash; 小巧轻盈的 http 性能测试工具.</description>
       <pubDate>Mon, 01 May 2017 08:36:54 +0000</pubDate>
       
       <guid>https://wuhang-du.github.io/post/2017-05-11-first/</guid>
-      <description>我的第一篇 github 博客, 本博客使用 jekyll + bootstrap 搭建!
- 感谢 github 提供的 Github Pages 功能!
-此博客布局参考了 Monkey Snatch Banana 博客
-个人页面应用了 resumecard 项目
-本项目Fork自liungkejin，在此特别感谢。
+      <description>第一版：2017-5-1
+我的第一篇 github 博客, 本博客使用 jekyll + bootstrap 搭建!
+感谢 github 提供的 Github Pages 功能!
+第二版：2017-7-27
+使用Hugo搭建，基于hyde
+借鉴了rakyll的css.
+独立添加了tags的功能。
 echo &amp;quot;你好, Github Pages!&amp;quot;;  </description>
     </item>
     

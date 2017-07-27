@@ -31,12 +31,9 @@ git merge develop 2017-07-26 11:32 du [develop] [master] Merge branch &#39;devel
       <pubDate>Wed, 28 Jun 2017 08:36:54 +0000</pubDate>
       
       <guid>https://wuhang-du.github.io/post/2017-06-28-mongo-lock/</guid>
-      <description>对Mongo锁机制以及索引的一些分析与理解
- 1.锁机制 锁机制保证多个客户端读和写时看到的是同样的数据。
-2.2 之前，mongo 实例只有一把全局的读写锁。
-2.2 之后，实现了粒度更小，数据库级别的锁。同时，对于一些长时间运行的操作，当满足一些条件时，则放弃锁。 全局锁仍然存在，但是只使用在mongo实例的级别，而且用的很少。我的理解是对全局的admin等操作时，会用到。
-我现在使用的版本是mongo 2.6, mongostat会返回一个 locked_db ,这个参数在以后的版本中没有了，之后的版本 是locked ,含义是 the percent of time in a global write lock.
-mongo 2.2 locked_db The percent of time in the per-database context-specific lock. mongostat will report the database that has spent the most time since the last mongostat call with a write lock. This value represents the amount of time that the listed database spent in a locked state combined with the time that the mongod spent in the global lock.</description>
+      <description>&lt;p&gt;对Mongo锁机制以及索引的一些分析与理解&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -157,11 +154,13 @@ wrk &amp;ndash; 小巧轻盈的 http 性能测试工具.</description>
       <pubDate>Mon, 01 May 2017 08:36:54 +0000</pubDate>
       
       <guid>https://wuhang-du.github.io/post/2017-05-11-first/</guid>
-      <description>我的第一篇 github 博客, 本博客使用 jekyll + bootstrap 搭建!
- 感谢 github 提供的 Github Pages 功能!
-此博客布局参考了 Monkey Snatch Banana 博客
-个人页面应用了 resumecard 项目
-本项目Fork自liungkejin，在此特别感谢。
+      <description>第一版：2017-5-1
+我的第一篇 github 博客, 本博客使用 jekyll + bootstrap 搭建!
+感谢 github 提供的 Github Pages 功能!
+第二版：2017-7-27
+使用Hugo搭建，基于hyde
+借鉴了rakyll的css.
+独立添加了tags的功能。
 echo &amp;quot;你好, Github Pages!&amp;quot;;  </description>
     </item>
     
