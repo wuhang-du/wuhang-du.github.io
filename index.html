@@ -78,12 +78,13 @@
 <p>使用git remote -v 就可以显示本地当前仓库的远程主机。</p>
 
 <pre><code>         git remote add [name] [url]
-example: git remote add origin https://github.com/wuhang-du/leetcode
+example: git remote add origin https://github.com/wuhang-du/leetcode 远端仓库在远端
+example: git remote add origin1 ../git-test                          远端仓库在本地
 </code></pre>
 
 <p>git merge 命令，即合并，主要提一下 &ndash;no-ff的使用。</p>
 
-<p>示例当前的分支是：master</p>
+<p>示例当前的分支是：master。develop分支以master分支作为基准分支，增加了新的内容。</p>
 
 <p>调用操作之后使用tig 查看当前的状态：</p>
 
@@ -114,6 +115,12 @@ git merge develop --no-ff
 
 git push origin master:master
 </code></pre>
+
+<p>未完待续：裸库的概念</p>
+
+<p>增加一些参考文章：</p>
+
+<p><a href="https://blog.coding.net/blog/git-from-the-inside-out">深入浅出 Git</a></p>
 
   </div>
   
