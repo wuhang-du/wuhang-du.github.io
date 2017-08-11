@@ -136,7 +136,7 @@ exit status 2
 
 <p>刚开始，主Go程给c1中发送数据test，使整个流程流动起来，最终也要拿出test,终止流程。</p>
 
-<pre><code>    c1 &lt;- test  
+<pre><code>    c1 &lt;- test
     time.Sleep(5000)
     test  = &lt;-c1   //增加的代码
 

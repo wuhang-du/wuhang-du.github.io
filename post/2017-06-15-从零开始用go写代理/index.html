@@ -123,9 +123,11 @@ client: 采用wrk模式，并发1000个。
 报错：
 
 go程内client.do函数：
-error: Get http://192.168.177.128:8081: dial tcp 192.168.177.128:8081: socket: too many open files
+error: Get http://192.168.177.128:8081: dial tcp 192.168.177.128:8081: 
+socket: too many open files
 proxy本身：
-2017/06/16 08:32:42 http: Accept error: accept tcp [::]:8080: accept4: too many open files; retrying in 10ms
+2017/06/16 08:32:42 http: Accept error: accept tcp [::]:8080: accept4: 
+too many open files; retrying in 10ms
 
 
 刚才发现不同的shell中ulimit 不一样。
@@ -159,7 +161,7 @@ var tr *http.Transport = &amp;http.Transport{
                 Timeout:   30 * time.Second,
                 KeepAlive: 30 * time.Second,
             }).Dial,
-            DisableKeepAlives : false,  
+            DisableKeepAlives : false,
             
             //这个值就是关键，含义是：保持长链接的TCP连接个数。不设置默认为2.
             MaxIdleConnsPerHost : 1000,  
@@ -178,6 +180,12 @@ Running 3s test @ http://127.0.0.1:8080
 Requests/sec:  13132.85
 Transfer/sec:      1.64MB
 </code></pre>
+
+<h4 id="4-实现"><strong>4.实现</strong></h4>
+
+<p>利用了 reverse.go，站在了巨人的肩膀上，只是简单的改写了director.</p>
+
+<p>github: <a href="https://github.com/wuhang-du/proxy">proxy</a></p>
 
 			</div>
 		</div>

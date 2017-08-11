@@ -25,21 +25,6 @@ WithCancel WithDeadline WithTimeout WithValue 以上函数根据不同的含义�
     </item>
     
     <item>
-      <title>Go：ReverProxy.Go 代码理解</title>
-      <link>https://wuhang-du.github.io/post/2017-06-19-reverproxy.go-%E4%BB%A3%E7%A0%81%E7%90%86%E8%A7%A3/</link>
-      <pubDate>Mon, 19 Jun 2017 08:36:54 +0000</pubDate>
-      
-      <guid>https://wuhang-du.github.io/post/2017-06-19-reverproxy.go-%E4%BB%A3%E7%A0%81%E7%90%86%E8%A7%A3/</guid>
-      <description>对使用GO语言实现反向代理的几种技术的理解与分析
- Talk is cheap, I will show you the code.
-通过阅读代码，一共看到了几种实现代理的方法
- io.copy
- http.Client
- reverseProxy
-   package httputil import ( &amp;quot;context&amp;quot; &amp;quot;io&amp;quot; &amp;quot;log&amp;quot; &amp;quot;net&amp;quot; &amp;quot;net/http&amp;quot; &amp;quot;net/url&amp;quot; &amp;quot;strings&amp;quot; &amp;quot;sync&amp;quot; &amp;quot;time&amp;quot; ) var onExitFlushLoop func() //函数式编程的写法 //这是一个结构体，可继承 type ReverseProxy struct { Director func(*http.Request) // If nil, http.DefaultTransport is used. // RoundTripper是一种类型，&amp;amp;Transport Transport http.RoundTripper // FlushInterval specifies the flush interval // to flush to the client while copying the // response body.</description>
-    </item>
-    
-    <item>
       <title>从零开始用Go写代理</title>
       <link>https://wuhang-du.github.io/post/2017-06-15-%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E7%94%A8go%E5%86%99%E4%BB%A3%E7%90%86/</link>
       <pubDate>Thu, 15 Jun 2017 08:36:54 +0000</pubDate>
