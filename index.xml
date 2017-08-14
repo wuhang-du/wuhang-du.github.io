@@ -6,10 +6,38 @@
     <description>Recent content on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 12 Aug 2017 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 14 Aug 2017 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Go与Nodejs性能简单对比</title>
+      <link>https://wuhang-du.github.io/post/2017-08-14-go%E4%B8%8Enodejs%E6%80%A7%E8%83%BD%E7%AE%80%E5%8D%95%E5%AF%B9%E6%AF%94/</link>
+      <pubDate>Mon, 14 Aug 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-08-14-go%E4%B8%8Enodejs%E6%80%A7%E8%83%BD%E7%AE%80%E5%8D%95%E5%AF%B9%E6%AF%94/</guid>
+      <description>背景 大半夜忽然想起来，之前同事提到的Go与Nodejs的性能比较，具体的数据差距很大。当时没有太在意，后来慢慢对Go了解了一些。从原理上来说
+Nodejs采用的是Reactor这种结构，与Nginx类似，一个连接就是一个数据结构，通过Epoll等来实现IO异步。 Go底层也是Reactor，每一个Go程就可以认为是单个数据结构，调度是由Go本身来提供的。  同事的测试数据记不清了，我的观点是Go和Nodejs应该是一个数量级的，但是Go默认是多核，而Nodejs天生就是单核，所以造成了巨大的差异。因此初步的想法就是验证多核和单核的影响。
+过程 centos7 ，虚拟机，cpu 4核。
+package main import ( &amp;quot;fmt&amp;quot; &amp;quot;runtime&amp;quot; &amp;quot;net/http&amp;quot; ) func handler(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, &amp;quot;Hello World&amp;quot;) } func main() { runtime.GOMAXPROCS(1) //关键点 http.HandleFunc(&amp;quot;/&amp;quot;, handler) http.ListenAndServe(&amp;quot;:8080&amp;quot;, nil) }  var http = require(&amp;quot;http&amp;quot;); http.createServer(function(request, response) { response.end(&amp;quot;hello World&amp;quot;); }).listen(8888,&amp;quot;0.0.0.0&amp;quot;);  测试使用Wrk，Nodejs使用pm2。
+wrk -t12 -c400 -d30s http://localhost:8080 pm2 start app.js -i 0 --name &amp;quot;api&amp;quot;  Running 30s test @ http://localhost:8888 12 threads and 400 connections Thread Stats Avg Stdev Max +/- Stdev Latency 23.</description>
+    </item>
+    
+    <item>
+      <title>微服务入门之Nodejs-Seneca</title>
+      <link>https://wuhang-du.github.io/post/2017-08-13-%E5%BE%AE%E6%9C%8D%E5%8A%A1%E5%85%A5%E9%97%A8%E4%B9%8Bnodejs-seneca/</link>
+      <pubDate>Sun, 13 Aug 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-08-13-%E5%BE%AE%E6%9C%8D%E5%8A%A1%E5%85%A5%E9%97%A8%E4%B9%8Bnodejs-seneca/</guid>
+      <description>项目上可能会用到微服务，因此以Seneca构建微服务为例，记录一下自己的一些理解。主要内容以get-started为基础。
+Seneca is a microservices toolkit for Node.js  what is Senaca 业务逻辑之外的一切都可以用微服务包装。通过解耦来让业务系统可以很容易的创建和改变。
+Senaca有以下几个属性：
+1. 模式匹配。 2. 隐藏服务间通信细节。 3. 组件化。通过插件组合成为微服务。  问题：多种通信协议的支持是怎么做的，或者是怎么配置的？Seneca内置有http，tcp等，消息队列等应该需要加新的微服务。搜索了一下，npm有seneca-queue。
+在一个进程内 通过seneca.add()增加模式，以及对应的处理函数。通过seneca.act()来触发该模式，以供add中添加的处理函数在逻辑之后调用act的回掉函数。
+问题：如果是远程调用，回调函数会被传递过去吗？ 答:不会，把模式msg发过去，远程的微服务将处理的结果传递回来，再供回调函数处理。可以看出，一个模式，加一个 处理逻辑就是一个服务，区别只是这个服务的位置。远端需要类似rpc。  模式匹配 在seneca中，“The more specific pattern always wins. In other words, the pattern with the highest number of matching attributes has precedence”。“If the patterns have the same number of properties, they are matched in alphabetical order.”
+举例说明：需要匹配的pattern信息是&#39;a:1, b:2&#39;： 如果微服务提供 &#39;a:1&#39;，&#39;a:1, b:2&#39;,这两个同时满足，则匹配more specific，即第二个。 字母顺序没太懂。感觉是在说精确匹配，不知道为什么要专门提这个。  因此，新的更具体的服务，只需要更加具体的模式，就可以在不影响原有功能的情况下扩展。</description>
+    </item>
     
     <item>
       <title>技能的反面</title>

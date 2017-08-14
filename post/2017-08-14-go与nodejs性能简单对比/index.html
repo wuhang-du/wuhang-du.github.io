@@ -1,0 +1,159 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Go与Nodejs性能简单对比 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-103633504-1', 'auto');
+      ga('send', 'pageview');
+      </script>
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我<br></br><br></br>
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/tags/">Tags</a> </li>
+      <li><a href="/about/">About</a> </li>
+      <li><a href="https://github.com/wuhang-du">Github</a></li>
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Go与Nodejs性能简单对比</h1>
+			  <span class="post-date">Mon ,Aug 14 ,2017</span>
+			      
+
+<h2 id="背景">背景</h2>
+
+<p>大半夜忽然想起来，之前同事提到的Go与Nodejs的性能比较，具体的数据差距很大。当时没有太在意，后来慢慢对Go了解了一些。从原理上来说</p>
+
+<pre><code>Nodejs采用的是Reactor这种结构，与Nginx类似，一个连接就是一个数据结构，通过Epoll等来实现IO异步。
+Go底层也是Reactor，每一个Go程就可以认为是单个数据结构，调度是由Go本身来提供的。
+</code></pre>
+
+<p>同事的测试数据记不清了，我的观点是Go和Nodejs应该是一个数量级的，但是Go默认是多核，而Nodejs天生就是单核，所以造成了巨大的差异。因此初步的想法就是验证多核和单核的影响。</p>
+
+<h2 id="过程">过程</h2>
+
+<p>centos7 ，虚拟机，cpu 4核。</p>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;runtime&quot;
+    &quot;net/http&quot;
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, &quot;Hello World&quot;)
+}
+
+func main() {
+    runtime.GOMAXPROCS(1)   //关键点
+    http.HandleFunc(&quot;/&quot;, handler)
+    http.ListenAndServe(&quot;:8080&quot;, nil)
+}
+</code></pre>
+
+<pre><code class="language-js">var http = require(&quot;http&quot;); 
+
+http.createServer(function(request, response) { 
+    response.end(&quot;hello World&quot;); 
+}).listen(8888,&quot;0.0.0.0&quot;);
+</code></pre>
+
+<p>测试使用Wrk，Nodejs使用pm2。</p>
+
+<pre><code>wrk -t12 -c400 -d30s http://localhost:8080
+pm2 start app.js -i 0 --name &quot;api&quot;
+</code></pre>
+
+<pre><code>Running 30s test @ http://localhost:8888
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    23.88ms    6.97ms 265.19ms   91.13%
+    Req/Sec     1.37k   301.01     4.35k    84.09%
+  487168 requests in 30.10s, 51.57MB read
+Requests/sec:  16187.38
+Transfer/sec:      1.71MB
+
+Running 30s test @ http://localhost:8080
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    14.05ms    3.83ms 212.71ms   73.18%
+    Req/Sec     2.35k   241.08     5.11k    75.92%
+  843218 requests in 30.05s, 102.93MB read
+Requests/sec:  28059.36
+Transfer/sec:      3.43MB
+
+Running 30s test @ http://localhost:8888
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     8.92ms    8.48ms 310.50ms   90.90%
+    Req/Sec     4.11k     1.40k   19.47k    69.56%
+  1471190 requests in 30.09s, 155.74MB read
+Requests/sec:  48888.35
+Transfer/sec:      5.18MB
+
+Running 30s test @ http://localhost:8080
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     5.15ms    4.34ms 222.96ms   80.88%
+    Req/Sec     7.04k     2.19k   61.53k    71.45%
+  2512607 requests in 30.10s, 306.71MB read
+Requests/sec:  83475.03
+Transfer/sec:     10.19MB
+</code></pre>
+
+<p>使用postman看了下两个的response,略有差别，Go有keep-alive，Node没有。是不是因为close再重连影响的？使用 netstat -tnp | grep &ldquo;8888&rdquo; | wc -l 发现在过程中并没有变化，所以排除重连。Go和Node都是793。wrk并发调为1000的时候为1993。还是奇数。单独的奇数我看了，只要wrk一启动就会有一个TIME_WAIT状态，猜测是wrk测试连接。所以，还是差8个，8/2=4，也就是说wrk少连了4个，再找，应该是1000/12=83,83*12=996,所以有4个。400是33*12=396，无意中挑的1000和400竟然结果一样。</p>
+
+<h2 id="结论">结论</h2>
+
+<p>有差距，是一个数量级，但是差距比较大。再找找原因。</p>
+
+			</div>
+		</div>
+		
+  </body>
+</html>

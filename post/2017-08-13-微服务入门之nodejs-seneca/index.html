@@ -1,0 +1,158 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>微服务入门之Nodejs-Seneca &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-103633504-1', 'auto');
+      ga('send', 'pageview');
+      </script>
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我<br></br><br></br>
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/tags/">Tags</a> </li>
+      <li><a href="/about/">About</a> </li>
+      <li><a href="https://github.com/wuhang-du">Github</a></li>
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>微服务入门之Nodejs-Seneca</h1>
+			  <span class="post-date">Sun ,Aug 13 ,2017</span>
+			      
+
+<p>项目上可能会用到微服务，因此以<a href="http://senecajs.org/">Seneca</a>构建微服务为例，记录一下自己的一些理解。主要内容以<a href="http://senecajs.org/getting-started/">get-started</a>为基础。</p>
+
+<pre><code>Seneca is a microservices toolkit for Node.js
+</code></pre>
+
+<h2 id="what-is-senaca">what is Senaca</h2>
+
+<p>业务逻辑之外的一切都可以用微服务包装。通过解耦来让业务系统可以很容易的创建和改变。</p>
+
+<p>Senaca有以下几个属性：</p>
+
+<pre><code>1. 模式匹配。
+2. 隐藏服务间通信细节。
+3. 组件化。通过插件组合成为微服务。
+</code></pre>
+
+<p>问题：多种通信协议的支持是怎么做的，或者是怎么配置的？Seneca内置有http，tcp等，消息队列等应该需要加新的微服务。搜索了一下，npm有seneca-queue。</p>
+
+<h2 id="在一个进程内">在一个进程内</h2>
+
+<p>通过seneca.add()增加模式，以及对应的处理函数。通过seneca.act()来触发该模式，以供add中添加的处理函数在逻辑之后调用act的回掉函数。</p>
+
+<pre><code>问题：如果是远程调用，回调函数会被传递过去吗？
+答:不会，把模式msg发过去，远程的微服务将处理的结果传递回来，再供回调函数处理。可以看出，一个模式，加一个
+处理逻辑就是一个服务，区别只是这个服务的位置。远端需要类似rpc。
+</code></pre>
+
+<h2 id="模式匹配">模式匹配</h2>
+
+<p>在seneca中，“The more specific pattern always wins. In other words, the pattern with the highest number of matching attributes has precedence”。“If the patterns have the same number of properties, they are matched in alphabetical order.”</p>
+
+<pre><code>举例说明：需要匹配的pattern信息是'a:1, b:2'：
+如果微服务提供 'a:1'，'a:1, b:2',这两个同时满足，则匹配more specific，即第二个。
+字母顺序没太懂。感觉是在说精确匹配，不知道为什么要专门提这个。
+</code></pre>
+
+<p>因此，新的更具体的服务，只需要更加具体的模式，就可以在不影响原有功能的情况下扩展。</p>
+
+<h2 id="模式匹配的一些小tips">模式匹配的一些小tips</h2>
+
+<p>代码复用，新的模式可以直接通过this.act()来使用之前的其他服务。</p>
+
+<p>如果需要在原有服务的基础上，加强新功能，可以选择overwrite,在原来add的基础上，继续add，在新的处理函数中，可以通过this.prior调用previous action definition。这样，可以在调用前功能之前改变输入，又可以在调用前功能之后改变输出。相当于给原有的服务包装了一层。</p>
+
+<h2 id="插件化">插件化</h2>
+
+<p>Seneca的插件是一个拥有单个参数的函数，通过use来引用，和express相似。</p>
+
+<p>函数名就是插件名，插件内通过this.add()添加新的模式，this指代的就是调用use的Seneca实例(instance)。</p>
+
+<p>调用this.add(&lsquo;init:插件名&rsquo;, func(msg, respond){ })可以初始化插件。respond不用自己定义，出错了调用就行。</p>
+
+<p>如果想要将单独的服务放在单独的文件中，必须是Node.js的modules了。module.exports = function name(options) {},调用时use中使用require或者直接用name都可以。</p>
+
+<p>还有一个this.wrap函数，就类似自动overwrite所有满足条件的pattern。在测试中，通过express,再远程调用服务，我这边看到的结果是wrap影响了pattern,具体的需要再研究。</p>
+
+<h2 id="把微服务摘出来">把微服务摘出来</h2>
+
+<p>之前的讨论都是在同一个进程中，现在要开始加上通信。</p>
+
+<pre><code>Server的一方listen({'type':&quot;tcp&quot;, pin:'role:math'})
+Client的一方client({'type':&quot;tcp&quot;, pin:'role:math'})。
+</code></pre>
+
+<p>这样，Client端只管act，满足pin的pattern就会自动调client。</p>
+
+<p>问题：seneca发送的包和接收的包是什么样的。</p>
+
+<p>根据不同的协议走不同格式的数据。http没必要，太重，tcp可以直接传递流。udp也不错。</p>
+
+<h2 id="集成web框架">集成web框架</h2>
+
+<p>seneca不是一个web框架。它可以处理http请求，但是它不是一个web框架。这块倒没有什么新的点，主要就是将api向pattern的转换，以及参数的一些设置。注意配置。</p>
+
+<h2 id="数据存储">数据存储</h2>
+
+<p>seneca-entity提供了一个数据抽象层.基于以下几个操作：</p>
+
+<pre><code>load:加载entity, role:entity,cmd:load,name:&lt;entity-name&gt; 
+save:创建或者更新entity, role:entity,cmd:save,name:&lt;entity-name&gt;
+list:列举entity.role:entity,cmd:list,name:&lt;entity-name&gt;
+remove:删除entity.role:entity,cmd:remove,name:&lt;entity-name&gt;
+</code></pre>
+
+<h2 id="总结">总结</h2>
+
+<p>seneca本身也只是提供了一个管理微服务的框架，服务本身+index:即pattern+通信机制。微服务是一个解耦的产物，有点类似于unix哲学，一个物体实现一个功能。相对于之前一个程序的所有功能统一管理，微服务以通信为代价，换取了扩展，部署等等好处。在云上应该很方便。</p>
+
+			</div>
+		</div>
+		
+  </body>
+</html>
