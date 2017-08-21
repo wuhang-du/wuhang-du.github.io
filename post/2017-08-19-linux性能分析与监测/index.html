@@ -1,0 +1,223 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Linux性能分析与监测 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-103633504-1', 'auto');
+      ga('send', 'pageview');
+      </script>
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我<br></br><br></br>
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/tags/">Tags</a> </li>
+      <li><a href="/about/">About</a> </li>
+      <li><a href="https://github.com/wuhang-du">Github</a></li>
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Linux性能分析与监测</h1>
+			  <span class="post-date">Sat ,Aug 19 ,2017</span>
+			      
+
+<h2 id="介绍">介绍</h2>
+
+<p>系统的性能分析对于性能提升来说，是一个缓慢，复杂的过程。生产环境一般都是类Linux系统，对于一个系统的性能监控，主要从<strong>CPU性能</strong>，<strong>内存管理</strong>，<strong>文件IO</strong>，<strong>网络IO</strong>这几个主要的方面进行。</p>
+
+<h2 id="1-cpu与内存相关">1.CPU与内存相关</h2>
+
+<p>CPU是整个计算机的处理核心，大脑。如果内核调度程序是管家的话，CPU就是在车间里一直干活的工人。它需要处理各种突发的事件（中断）；它需要雨露均沾，让每个进程都不受冷落（时间片，上下文切换）；鉴于车间的空间有限，有些重要的生产资料一直在手边，其他的资料有空间就继续使，没有就得放隔壁专用车间（内存与交换区）。我们需要做的就是监控上述行为，以便了解车间的现状。</p>
+
+<p>测试场景：4核Centos 7, 使用go监听8080端口，对请求不做处理，立即返回&rdquo;Hello World&rdquo;,使用wrk -t4 -c800 来访问。</p>
+
+<pre><code>vmstat 1
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 7  0      0 1644432   9460 1452656    0    0     0    82 9345 9853 37 54  9  0  0
+ 8  0      0 1644592   9460 1452656    0    0     0     0 8789 9478 39 53  8  0  0
+ 9  0      0 1644432   9460 1452656    0    0     0     0 10070 11192 35 56  9  0  0
+ 8  0      0 1644352   9460 1452656    0    0     0     0 7861 7467 40 54  7  0  0
+
+Procs:
+    r: The number of runnable processes (running or waiting for run time)
+    b: The number of processes in uninterruptible sleep.
+Memory:
+    swpd: the amount of virtual memory used.
+    free: the amount of idle memory.
+    buff: the amount of memory used as buffers.
+    cache: the amount of memory used as cache
+Swap:
+    si: Amount of memory swapped in from disk (/s)
+    so: Amount of memory swapped to disk (/s)
+IO:
+    bi: Blocks received from a block device (blocks/s)
+    bo: Blocks sent to a block device (blocks/s)
+System:
+    in: The number of interrupts per second, including the clock.
+    cs: The number of context switches per second
+CPU：
+    us: Time spent running non-kernel code.  (user time, including nice time)
+    sy: Time spent running kernel code.  (system time)
+    id: Time spent idle.  Prior to Linux 2.5.41, this includes IO-wait time
+    wa: Time spent waiting for IO.  Prior to Linux 2.5.41, included in idle.
+    st: Time stolen from a virtual machine.
+
+    nice time: time running niced user processes (explain from man top)
+</code></pre>
+
+<pre><code>mpstat -P ALL 1
+Linux 3.10.0-123.el7.x86_64 (localhost.localdomain)   08/19/2017  _x86_64_  (4 CPU)
+
+AM  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
+AM  all   39.73    0.00   27.57    0.00    0.00   24.86    0.00    0.00    0.00    7.84
+AM    0   35.87    0.00   32.61    0.00    0.00   23.91    0.00    0.00    0.00    7.61
+AM    1   43.75    0.00   21.88    0.00    0.00   30.21    0.00    0.00    0.00    4.17
+AM    2   39.13    0.00   29.35    0.00    0.00   22.83    0.00    0.00    0.00    8.70
+AM    3   40.45    0.00   28.09    0.00    0.00   21.35    0.00    0.00    0.00   10.11
+
+</code></pre>
+
+<pre><code>top H
+
+top - 09:58:59 up 4 days, 11:03,  8 users,  load average: 7.64, 6.92, 4.92
+Threads: 476 total,   9 running, 467 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 37.4 us, 23.3 sy,  0.0 ni, 23.5 id,  0.0 wa,  0.0 hi, 15.8 si,  0.0 st
+KiB Mem:   3869044 total,  2231604 used,  1637440 free,     9460 buffers
+KiB Swap:  2113532 total,        0 used,  2113532 free.  1452668 cached Mem
+
+PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
+ 42091 du        20   0  381780  28936   2424 R 54.4  0.7   7:01.43 server
+ 42089 du        20   0  381780  28936   2424 R 45.5  0.7   6:25.43 server 
+ 42215 du        20   0  381780  28936   2424 R 45.2  0.7   5:11.28 server 
+ 43474 du        20   0  381780  28936   2424 S 37.6  0.7   0:05.30 server 
+ 42218 du        20   0  381780  28936   2424 S 30.7  0.7   1:38.23 server 
+ 42090 du        20   0  381780  28936   2424 R 24.7  0.7   7:16.26 server 
+ 42425 du        20   0  415204  15584   1248 S 24.4  0.4   1:39.59 wrk
+ 42214 du        20   0  381780  28936   2424 R 22.4  0.7   7:03.22 server 
+ 42424 du        20   0  415204  15584   1248 S 20.8  0.4   1:39.64 wrk
+ 42426 du        20   0  415204  15584   1248 R 19.5  0.4   1:39.70 wrk
+ 42427 du        20   0  415204  15584   1248 S 18.1  0.4   1:39.08 wrk
+ 42217 du        20   0  381780  28936   2424 R  3.0  0.7   7:24.14 server
+ 42088 du        20   0  381780  28936   2424 S  1.3  0.7   0:11.81 server 
+
+ps: 我是采用go run server.go ，竟然生出了好多个server thread。go有运行时（runtime）,一般情况下，
+还有和核数相同的M即thread，如果有系统调用还会生成新的thread。
+wrk倒是很彻底，fork了4个。
+
+free -m
+             total       used       free     shared    buffers     cached
+Mem:          3778       2196       1581        104          9       1414
+-/+ buffers/cache:        773       3005
+Swap:         2063          0       2063
+</code></pre>
+
+<h2 id="2-文件io">2.文件IO</h2>
+
+<pre><code>iotop命令
+
+Total DISK READ :   0.00 B/s | Total DISK WRITE :       0.00 B/s
+Actual DISK READ:   0.00 B/s | Actual DISK WRITE:       0.00 B/s
+TID  PRIO  USER     DISK READ  DISK WRITE  SWAPIN     IO&gt;    COMMAND
+ 1 be/4 root        0.00 B/s    0.00 B/s  0.00 %  0.00 % systemd --system --deserialize 26
+ 2 be/4 root        0.00 B/s    0.00 B/s  0.00 %  0.00 % [kthreadd]
+ 3 be/4 root        0.00 B/s    0.00 B/s  0.00 %  0.00 % [ksoftirqd/0]
+ 5 be/0 root        0.00 B/s    0.00 B/s  0.00 %  0.00 % [kworker/0:0H]
+ 7 rt/4 root        0.00 B/s    0.00 B/s  0.00 %  0.00 % [migration/0]
+ 8 be/4 root        0.00 B/s    0.00 B/s  0.00 %  0.00 % [rcu_bh]
+</code></pre>
+
+<h2 id="3-网络io">3.网络IO</h2>
+
+<pre><code>/sbin/ethtool eno16777736 查看网卡的信息
+Settings for eno16777736:
+    Supported ports: [ TP ]
+    Supported link modes:   10baseT/Half 10baseT/Full 
+                            100baseT/Half 100baseT/Full 
+                            1000baseT/Full 
+    Supported pause frame use: No
+    Supports auto-negotiation: Yes
+    Advertised link modes:  10baseT/Half 10baseT/Full 
+                            100baseT/Half 100baseT/Full 
+                            1000baseT/Full 
+    Advertised pause frame use: No
+    Advertised auto-negotiation: Yes
+    Speed: 1000Mb/s
+    Duplex: Full
+    Port: Twisted Pair
+    PHYAD: 0
+    Transceiver: internal
+    Auto-negotiation: on
+    MDI-X: off (auto)
+    Supports Wake-on: d
+    Wake-on: d
+    Current message level: 0x00000007 (7)
+                   drv probe link
+    Link detected: yes
+
+
+iftop
+
+TX:     cum:   21.5MB   peak:   6.29Mb      rates:   6.29Mb  6.16Mb  5.74Mb
+RX:            353KB            102Kb                 101Kb   100Kb  94.0Kb
+TOTAL:         21.9MB           6.39Mb               6.39Mb  6.25Mb  5.83Mb
+
+</code></pre>
+
+<h2 id="总结">总结</h2>
+
+<p>其实也只是列举了一些命令，在使用的过程中对命令的一些参数的含义自己检查记忆。Linux系统发展至今，有许多优秀的工具来供我们使用。它们从各个角度对系统做出了阐述。</p>
+
+<p>但是如果我们跳出系统的圈子来看一个系统，主要的方向其实就是cpu和IO。cpu的正常运行，需要一定的调度策略（这点通过中断以及上下文切换可以看出数量），拥有内核空间和用户空间的概念（sys时间以及user时间，以此推断），需要空间来保存信息（内存的使用），需要信息的交换（内存与SWAP的相关），IO根据业务的不同，包括文件IO以及网络IO，其实就是对内对外输出。以网络IO为例，查看实时的速率。</p>
+
+<p>希望能有机会实际演练，纸上谈兵终觉浅。</p>
+
+<p><a href="http://www.techug.com/post/linux-performance-tools.html">三张图看遍Linux 性能监控、测试、优化工具</a></p>
+
+			</div>
+		</div>
+		
+  </body>
+</html>

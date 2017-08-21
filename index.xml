@@ -6,10 +6,22 @@
     <description>Recent content on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 14 Aug 2017 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 19 Aug 2017 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Linux性能分析与监测</title>
+      <link>https://wuhang-du.github.io/post/2017-08-19-linux%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E4%B8%8E%E7%9B%91%E6%B5%8B/</link>
+      <pubDate>Sat, 19 Aug 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-08-19-linux%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E4%B8%8E%E7%9B%91%E6%B5%8B/</guid>
+      <description>介绍 系统的性能分析对于性能提升来说，是一个缓慢，复杂的过程。生产环境一般都是类Linux系统，对于一个系统的性能监控，主要从CPU性能，内存管理，文件IO，网络IO这几个主要的方面进行。
+1.CPU与内存相关 CPU是整个计算机的处理核心，大脑。如果内核调度程序是管家的话，CPU就是在车间里一直干活的工人。它需要处理各种突发的事件（中断）；它需要雨露均沾，让每个进程都不受冷落（时间片，上下文切换）；鉴于车间的空间有限，有些重要的生产资料一直在手边，其他的资料有空间就继续使，没有就得放隔壁专用车间（内存与交换区）。我们需要做的就是监控上述行为，以便了解车间的现状。
+测试场景：4核Centos 7, 使用go监听8080端口，对请求不做处理，立即返回&amp;rdquo;Hello World&amp;rdquo;,使用wrk -t4 -c800 来访问。
+vmstat 1 procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu----- r b swpd free buff cache si so bi bo in cs us sy id wa st 7 0 0 1644432 9460 1452656 0 0 0 82 9345 9853 37 54 9 0 0 8 0 0 1644592 9460 1452656 0 0 0 0 8789 9478 39 53 8 0 0 9 0 0 1644432 9460 1452656 0 0 0 0 10070 11192 35 56 9 0 0 8 0 0 1644352 9460 1452656 0 0 0 0 7861 7467 40 54 7 0 0 Procs: r: The number of runnable processes (running or waiting for run time) b: The number of processes in uninterruptible sleep.</description>
+    </item>
     
     <item>
       <title>Go与Nodejs性能简单对比</title>
