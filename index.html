@@ -1717,9 +1717,67 @@ second have
 
 <h4 id="3-简单使用">3.简单使用</h4>
 
+<hr />
+
 <p><a href="http://www.cnblogs.com/xinzhao/p/6233009.html">Http压测工具wrk使用指南</a></p>
 
 <p><a href="http://zjumty.iteye.com/blog/2221040">wrk &ndash; 小巧轻盈的 http 性能测试工具.</a></p>
+
+<h4 id="4-update-2017-10-12">4.Update:2017-10-12</h4>
+
+<hr />
+
+<p>又重新捡了起来，附上一个比较完整的脚本。</p>
+
+<pre><code>
+-- 全局环境内执行的代码
+local counter = 1 --全局的counter
+local threads = {} --全局的threads
+dofile(&quot;./token.lua&quot;)
+wrk.method = &quot;GET&quot; --修改了全局的wrk参数。
+ 
+
+function setup(thread)  --setup函数，各个thread分开执行前，执行。
+    thread:set(&quot;id&quot;, counter) 
+    table.insert(threads, thread) 
+    counter = counter + 1 
+end 
+
+
+-- 各个thread内执行的函数 
+function init(args) --每一个thread 各自一个独立的 lua环境。
+    requests  = 0 
+    responses = 0 
+  
+    local msg = &quot;thread %d created&quot;  
+    print(msg:format(id))
+    path = &quot;/redeem/mobile/Controller/Handler.ashx?token=&quot;  
+end 
+  
+function request() 
+    requests = requests + 1
+    tokentmp = getToken()
+    tmp = path .. tokentmp
+    -- function wrk.format(method, path, headers, body) 会merge 默认的值。
+    return wrk.format(nil, tmp) 
+end 
+  
+function response(status, headers, body) 
+    responses = responses + 1 
+    print(body) 
+end 
+ 
+ -- 全局环境中执行的函数
+function done(summary, latency, requests) 
+   for _, thread in ipairs(threads) do 
+      local id        = thread:get(&quot;id&quot;) 
+      local requests  = thread:get(&quot;requests&quot;) 
+      local responses = thread:get(&quot;responses&quot;) 
+      local msg = &quot;thread %d made %d requests and got %d responses&quot; 
+      print(msg:format(id, requests, responses)) 
+   end 
+end
+</code></pre>
 
   </div>
   

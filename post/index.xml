@@ -185,7 +185,9 @@ f, err := os.Open(name) (some other code...) d, err := f.Stat()  在上述的代
  1.基础功能 命令是：
 wrk -t12 -c400 -d30s http://127.0.0.1:8080/index.html -t : 线程数 -c : http连接总数。 -d : 测试时长。 -s : lua脚本参数  2.简单分析 wrk主要是
   基于redis的ae模块, 提供异步框架。 nginx的httpparser, 提供http的请求解析。 lua脚本，利用Lua的创建更复杂的测试用例。   3.简单使用 Http压测工具wrk使用指南
-wrk &amp;ndash; 小巧轻盈的 http 性能测试工具.</description>
+wrk &amp;ndash; 小巧轻盈的 http 性能测试工具.
+4.Update:2017-10-12 又重新捡了起来，附上一个比较完整的脚本。
+ -- 全局环境内执行的代码 local counter = 1 --全局的counter local threads = {} --全局的threads dofile(&amp;quot;./token.lua&amp;quot;) wrk.method = &amp;quot;GET&amp;quot; --修改了全局的wrk参数。 function setup(thread) --setup函数，各个thread分开执行前，执行。 thread:set(&amp;quot;id&amp;quot;, counter) table.insert(threads, thread) counter = counter + 1 end -- 各个thread内执行的函数 function init(args) --每一个thread 各自一个独立的 lua环境。 requests = 0 responses = 0 local msg = &amp;quot;thread %d created&amp;quot; print(msg:format(id)) path = &amp;quot;/redeem/mobile/Controller/Handler.</description>
     </item>
     
     <item>
