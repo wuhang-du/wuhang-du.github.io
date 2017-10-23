@@ -64,6 +64,124 @@
       
   <div class="post">
     <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2017-10-23-gohttp%E6%9C%8D%E5%8A%A1%E6%8E%A2%E7%A9%B6/">
+        Go：http服务探究
+      </a>
+    </h1>
+
+    <span class="post-date">Mon, Oct 23, 2017</span>
+
+    <p>在单核CPU的情况下，实现一个返回&rdquo;Hello World&rdquo;的服务器为例，通过比较C与Go的代码，探究go的一些设计与理念。</p>
+
+<!--break-->
+
+<p>如果，以C语言为例，要实现一个返回&rdquo;Hello World&rdquo;的http服务器。</p>
+
+<pre><code>1. Listen端口
+2. 为了支持高并发，将fd加入 加入epoll监听。
+3. 该fd可读，accept 新的fd. 并开始监听。
+4. 读取新连接的数据(二进制流)
+5. http协议的分析处理
+6. 向新连接写入http协议二进制流&quot;hello World&quot;。
+
+主要还是 listen,accept,send几个api.
+</code></pre>
+
+<p>看一下go的实现。下面的go代码也实现了上述的效果。</p>
+
+<pre><code>package main
+import (
+    &quot;fmt&quot;
+    &quot;net/http&quot;
+)
+
+func hello(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, &quot;Hello, world \n&quot;)
+}
+
+func main() {
+    http.HandleFunc(&quot;/&quot;, hello)
+    err := http.ListenAndServe(&quot;:8080&quot;, nil)
+    if err != nil {
+        fmt.Println(&quot;return&quot;)
+    }
+}
+</code></pre>
+
+<p>通过追代码，有以下几个感悟：</p>
+
+<pre><code>1. Go 中listen的部分。
+定义一个Listener的接口。
+type Listener interface {
+        Accept() (Conn, error)
+        Close() error
+        Addr() Addr
+}
+
+在上述的代码中，ListenAndServe中，使用了下面的结构。
+type tcpKeepAliveListener struct {
+    *net.TCPListener
+}
+
+通过对TCPListener的包装，继承了该结构体的其他函数，只是重写accept() 函数。
+从逻辑上说只是一层包装，实现了从该fd accept的连接 增加keepalive的功能。
+</code></pre>
+
+<pre><code>2. Server结构。
+
+// handler接口，定义一个可处理http请求 r, 并写回 w 中的函数。
+// 其实，看代码就可以知道 r 就是从 w 中读出来的。
+
+type Handler interface {
+    ServeHTTP(w ResponseWriter, r *Request)
+}
+
+type HandlerFunc func(ResponseWriter, *Request) 
+func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request) {
+    f(w, r)
+}
+
+
+
+func (srv *Server) Serve(l net.Listener) {
+    // 函数的参数是listener接口类型。
+    
+    rw = l.accept()
+    // A conn represents the server side of an HTTP connection.
+    c := srv.newConn(rw)
+    c.setState(c.rwc, StateNew) // before Serve can return
+    // go 高并发的秘诀就在这里，每一个accept 使用一个go程处理。
+    // 和epoll 有异曲同工之妙。
+    // 其实底子里，go 还是用的 epoll.
+    go c.serve(ctx)
+}
+</code></pre>
+
+<pre><code>3. conn是一个结构体，表示http Server端的一个连接。
+
+它会调用Server中的 handler, 也就是我们的 hello 函数。
+
+func (c *conn) serve(ctx context.Context) {
+    serverHandler{c.server}.ServeHTTP(w, w.req)
+}
+</code></pre>
+
+<p>总结：</p>
+
+<p>本来是想探索下go的实现中，接口设计相关的东西，但是代码看下来，只达到了窥一斑。</p>
+
+<p><a href="https://www.youtube.com/watch?v=29LLRKIL_TI">7 Common Mistakes</a></p>
+
+<p>interface只是行为，behavior。function 不改变状态，same input， same output.所以说 它只是在做事情。</p>
+
+<p>struct包括 state 和 methods. methods 会改变结构体本身的状态。</p>
+
+<p>还需要更多的学习，加深体会。</p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="https://wuhang-du.github.io/post/2017-08-19-linux%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E4%B8%8E%E7%9B%91%E6%B5%8B/">
         Linux性能分析与监测
       </a>

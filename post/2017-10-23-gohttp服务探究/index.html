@@ -1,0 +1,175 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Go：http服务探究 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-103633504-1', 'auto');
+      ga('send', 'pageview');
+      </script>
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我<br></br><br></br>
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/tags/">Tags</a> </li>
+      <li><a href="/about/">About</a> </li>
+      <li><a href="https://github.com/wuhang-du">Github</a></li>
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Go：http服务探究</h1>
+			  <span class="post-date">Mon ,Oct 23 ,2017</span>
+			      <p>在单核CPU的情况下，实现一个返回&rdquo;Hello World&rdquo;的服务器为例，通过比较C与Go的代码，探究go的一些设计与理念。</p>
+
+<!--break-->
+
+<p>如果，以C语言为例，要实现一个返回&rdquo;Hello World&rdquo;的http服务器。</p>
+
+<pre><code>1. Listen端口
+2. 为了支持高并发，将fd加入 加入epoll监听。
+3. 该fd可读，accept 新的fd. 并开始监听。
+4. 读取新连接的数据(二进制流)
+5. http协议的分析处理
+6. 向新连接写入http协议二进制流&quot;hello World&quot;。
+
+主要还是 listen,accept,send几个api.
+</code></pre>
+
+<p>看一下go的实现。下面的go代码也实现了上述的效果。</p>
+
+<pre><code>package main
+import (
+    &quot;fmt&quot;
+    &quot;net/http&quot;
+)
+
+func hello(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, &quot;Hello, world \n&quot;)
+}
+
+func main() {
+    http.HandleFunc(&quot;/&quot;, hello)
+    err := http.ListenAndServe(&quot;:8080&quot;, nil)
+    if err != nil {
+        fmt.Println(&quot;return&quot;)
+    }
+}
+</code></pre>
+
+<p>通过追代码，有以下几个感悟：</p>
+
+<pre><code>1. Go 中listen的部分。
+定义一个Listener的接口。
+type Listener interface {
+        Accept() (Conn, error)
+        Close() error
+        Addr() Addr
+}
+
+在上述的代码中，ListenAndServe中，使用了下面的结构。
+type tcpKeepAliveListener struct {
+    *net.TCPListener
+}
+
+通过对TCPListener的包装，继承了该结构体的其他函数，只是重写accept() 函数。
+从逻辑上说只是一层包装，实现了从该fd accept的连接 增加keepalive的功能。
+</code></pre>
+
+<pre><code>2. Server结构。
+
+// handler接口，定义一个可处理http请求 r, 并写回 w 中的函数。
+// 其实，看代码就可以知道 r 就是从 w 中读出来的。
+
+type Handler interface {
+    ServeHTTP(w ResponseWriter, r *Request)
+}
+
+type HandlerFunc func(ResponseWriter, *Request) 
+func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request) {
+    f(w, r)
+}
+
+
+
+func (srv *Server) Serve(l net.Listener) {
+    // 函数的参数是listener接口类型。
+    
+    rw = l.accept()
+    // A conn represents the server side of an HTTP connection.
+    c := srv.newConn(rw)
+    c.setState(c.rwc, StateNew) // before Serve can return
+    // go 高并发的秘诀就在这里，每一个accept 使用一个go程处理。
+    // 和epoll 有异曲同工之妙。
+    // 其实底子里，go 还是用的 epoll.
+    go c.serve(ctx)
+}
+</code></pre>
+
+<pre><code>3. conn是一个结构体，表示http Server端的一个连接。
+
+它会调用Server中的 handler, 也就是我们的 hello 函数。
+
+func (c *conn) serve(ctx context.Context) {
+    serverHandler{c.server}.ServeHTTP(w, w.req)
+}
+</code></pre>
+
+<p>总结：</p>
+
+<p>本来是想探索下go的实现中，接口设计相关的东西，但是代码看下来，只达到了窥一斑。</p>
+
+<p><a href="https://www.youtube.com/watch?v=29LLRKIL_TI">7 Common Mistakes</a></p>
+
+<p>interface只是行为，behavior。function 不改变状态，same input， same output.所以说 它只是在做事情。</p>
+
+<p>struct包括 state 和 methods. methods 会改变结构体本身的状态。</p>
+
+<p>还需要更多的学习，加深体会。</p>
+
+			</div>
+		</div>
+		
+  </body>
+</html>

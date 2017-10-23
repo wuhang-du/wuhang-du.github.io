@@ -6,10 +6,23 @@
     <description>Recent content in Golang on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 14 Aug 2017 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 23 Oct 2017 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/tags/golang/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Go：http服务探究</title>
+      <link>https://wuhang-du.github.io/post/2017-10-23-gohttp%E6%9C%8D%E5%8A%A1%E6%8E%A2%E7%A9%B6/</link>
+      <pubDate>Mon, 23 Oct 2017 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2017-10-23-gohttp%E6%9C%8D%E5%8A%A1%E6%8E%A2%E7%A9%B6/</guid>
+      <description>在单核CPU的情况下，实现一个返回&amp;rdquo;Hello World&amp;rdquo;的服务器为例，通过比较C与Go的代码，探究go的一些设计与理念。
+ 如果，以C语言为例，要实现一个返回&amp;rdquo;Hello World&amp;rdquo;的http服务器。
+1. Listen端口 2. 为了支持高并发，将fd加入 加入epoll监听。 3. 该fd可读，accept 新的fd. 并开始监听。 4. 读取新连接的数据(二进制流) 5. http协议的分析处理 6. 向新连接写入http协议二进制流&amp;quot;hello World&amp;quot;。 主要还是 listen,accept,send几个api.  看一下go的实现。下面的go代码也实现了上述的效果。
+package main import ( &amp;quot;fmt&amp;quot; &amp;quot;net/http&amp;quot; ) func hello(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, &amp;quot;Hello, world \n&amp;quot;) } func main() { http.HandleFunc(&amp;quot;/&amp;quot;, hello) err := http.ListenAndServe(&amp;quot;:8080&amp;quot;, nil) if err != nil { fmt.Println(&amp;quot;return&amp;quot;) } }  通过追代码，有以下几个感悟：
+1. Go 中listen的部分。 定义一个Listener的接口。 type Listener interface { Accept() (Conn, error) Close() error Addr() Addr } 在上述的代码中，ListenAndServe中，使用了下面的结构。 type tcpKeepAliveListener struct { *net.</description>
+    </item>
     
     <item>
       <title>Go与Nodejs性能简单对比</title>
