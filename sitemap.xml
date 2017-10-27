@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://wuhang-du.github.io/post/2017-10-27-go%E4%BD%BF%E7%94%A8error%E7%9A%84%E5%87%A0%E7%A7%8D%E5%A7%BF%E5%8A%BF/</loc>
+    <lastmod>2017-10-27T08:36:54+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://wuhang-du.github.io/post/2017-10-23-gohttp%E6%9C%8D%E5%8A%A1%E6%8E%A2%E7%A9%B6/</loc>
     <lastmod>2017-10-23T08:36:54+00:00</lastmod>
   </url>
@@ -96,19 +101,19 @@
   
   <url>
     <loc>https://wuhang-du.github.io/</loc>
-    <lastmod>2017-10-23T08:36:54+00:00</lastmod>
+    <lastmod>2017-10-27T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wuhang-du.github.io/tags/golang/</loc>
-    <lastmod>2017-10-23T08:36:54+00:00</lastmod>
+    <lastmod>2017-10-27T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wuhang-du.github.io/categories/golang/</loc>
-    <lastmod>2017-10-23T08:36:54+00:00</lastmod>
+    <lastmod>2017-10-27T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -138,7 +143,7 @@
   
   <url>
     <loc>https://wuhang-du.github.io/post/</loc>
-    <lastmod>2017-10-23T08:36:54+00:00</lastmod>
+    <lastmod>2017-10-27T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   

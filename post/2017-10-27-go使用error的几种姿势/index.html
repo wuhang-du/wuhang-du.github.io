@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+	<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
 <head>
   <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
@@ -10,7 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 
   
-  <title>Categories &middot; Diamondu</title>
+  <title>Go：使用Error的几种姿势 &middot; Diamondu</title>
   
 
   
@@ -24,12 +24,11 @@
   <link rel="shortcut icon" href="/favicon.png">
 
   
-  <link href="https://wuhang-du.github.io/categories/index.xml" rel="alternate" type="application/rss+xml" title="Diamondu" />
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
 </head>
 
-<body class=" layout-reverse">
-
-<div class="sidebar">
+	<body class=" layout-reverse">
+		<div class="sidebar">
   <div class="container">
     <div class="sidebar-about">
       <script>
@@ -58,23 +57,87 @@
   </div>
 </div>
 
-  <div class="content container">
-  <h1> categories </h1>
-    <div class="posts">
-    	<ul class="archive">
-            
-            <li><a href="development/">development</a> 2</li>
-            
-            <li><a href="golang/">golang</a> 9</li>
-            
-            <li><a href="mongo/">mongo</a> 1</li>
-            
-            <li><a href="nodejs/">nodejs</a> 2</li>
-            
-            <li><a href="thinks/">thinks</a> 1</li>
-            
-        </ul>
-    </div>
-  </div>
-</body>
+		<div class="content container">
+			<div class="post">
+			 	<h1>Go：使用Error的几种姿势</h1>
+			  <span class="post-date">Fri ,Oct 27 ,2017</span>
+			      <p>Talk is cheap, I will show you the code.</p>
+
+<p>总的来说，error 一共有3种用法：</p>
+
+<pre><code>1. 第一种夹带私货。使用struct结果包裹，提供更多的信息。
+
+2. 还是基于struct , 加上了更多的逻辑的判断。
+
+3. error变量的直接比较。在标准库中很常见。
+</code></pre>
+
+<pre><code>package main
+
+import &quot;errors&quot;
+import &quot;fmt&quot;
+
+
+//第一种姿势
+type MyError struct {
+    Op  string
+    Err error
+}
+
+func (e *MyError) Error() string { return e.Op + &quot; &quot; + e.Err.Error() }
+
+func test() error { return &amp;MyError{&quot;Op string&quot;, errors.New(&quot;this is my err&quot;)} }
+
+
+//第二种姿势
+type DNSError struct {
+    Err error
+}
+
+func (e *DNSError) Error() string {
+    return e.Err.Error()
+}
+
+func (e *DNSError) Timeout() bool {
+    return true
+}
+
+func (e *DNSError) Temporary() bool {
+    return false
+}
+
+//第三种姿势
+var testErr = errors.New(&quot;this is my err&quot;)
+
+func testErrFunc() error { return testErr }
+
+func main() {
+
+    a := test()
+    if b, ok := a.(*MyError); ok {
+        fmt.Println(b)
+    }
+
+    c := DNSError{errors.New(&quot;DNS ERRror&quot;)}
+    if c.Temporary() {
+        return
+    } else if c.Timeout() {
+        fmt.Println(c)
+    }
+
+    if testErr == testErrFunc() {
+        fmt.Println(&quot;Err is equal&quot;)
+    }
+}
+output:
+
+Op string this is my err
+{DNS ERRror}
+Err is equal
+</code></pre>
+
+			</div>
+		</div>
+		
+  </body>
 </html>
