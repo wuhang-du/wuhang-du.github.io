@@ -6,10 +6,34 @@
     <description>Recent content in Mongo on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 28 Jun 2017 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 03 Jan 2018 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/tags/mongo/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>关于mongo的一些体会</title>
+      <link>https://wuhang-du.github.io/post/2018-1-3-%E5%85%B3%E4%BA%8Emongo%E7%9A%84%E4%B8%80%E4%BA%9B%E4%BD%93%E4%BC%9A/</link>
+      <pubDate>Wed, 03 Jan 2018 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2018-1-3-%E5%85%B3%E4%BA%8Emongo%E7%9A%84%E4%B8%80%E4%BA%9B%E4%BD%93%E4%BC%9A/</guid>
+      <description>项目中主要的业务数据库使用了mongo。前几天在微博上看到有大佬在讨论正确使用mongo的事情，自己也梳理了一下，努力不让自己变成把mongo只当json存储的程序员。
+1. mongo的数据形式 主要是两种设计，一种是refrence。refrence是传统的范式设计所推崇的，有代表性的操作就是join以及外键带来的一些操作。
+关于refrence的实现，mongo有两种主要的形式，一种是手动id关联，另外一种是Dbref。手动id需要将关联&amp;rdquo;in mind&amp;rdquo;.使用Dbref的话，当数据要变动时，会很复杂。
+知乎上看到的：mysql的设计初始，是传统的C-S架构，C端是不可靠以及不可信的， 因此在S端的功能很重，包括事务，外键等等。 而随着技术的发展，目前在mysql的前面一般会有内网的业务逻辑服务器， 也就是说是可信端在操作mysql,事务可以放在业务层去处理，外键这种关联也可以挪到业务层去实现。  第二种就是embedded。
+mongo作为document类型的数据库，它的灵活与便利就是embedded。将所有的相关的数据放在一起，减少查询，单次操作。它的缺点是可能会带来数据的冗余，另外所有的数据放在一起，表越大，写性能会越差。
+2. mongo是否具有可扩展性。 最近在项目中使用了mongo的复制集，自己就认为mongo是具有扩展性的。然而，答案并不是这么简单。
+那么，什么是可扩展性?
+先补充一点点概念：
+Scale-up(纵向扩展) 主要是升级现有的机器，简而言之：加配置。 Scale-out(横向扩展) 主要是增加处理节点，简而言之：加机器。(主流的方向)  参考：SQL Databases Don&amp;rsquo;t Scale
+可扩展性主要表现在三个方面： 1:水平扩展，机器越多，处理能力越强。 2:应用无感知。 3:系统不因单点故障不可用。 以RAID (Random Array of Inexpensive Disk)为例： 1.更多的磁盘更好的性能。 2.应用系统不需要关注文件存储的具体分布，RAID对外是一个整体。 3.从RAID中拿出一个磁盘，不影响RAID工作。  所以，我们可以看出，mongo的复制集并不是可扩展的。
+  机器越多，读性能越好，写性能仍然是瓶颈。
+ 应用使用mongo驱动，可以实现无感知。
+ 单点故障时，如果写节点宕机，会丢一部分数据。
+   整体来说，复制集不是一个纯粹的可扩展。mongo最新支持的auto-sharding就可以称之为可扩展。
+最后贴上引发这篇文章的链接 NoSQL: If Only It Was That Easy
+The real thing to point out is that if you are being held back from making something super awesome because you can’t choose a database, you are doing it wrong.</description>
+    </item>
     
     <item>
       <title>Mongo锁机制与索引的理解</title>
