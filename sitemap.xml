@@ -3,6 +3,16 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://wuhang-du.github.io/post/2018-1-22-count-bits/</loc>
+    <lastmod>2018-01-22T08:36:54+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://wuhang-du.github.io/post/2018-1-12-%E7%81%AB%E7%84%B0%E5%9B%BE%E7%9A%84%E5%AD%A6%E4%B9%A0%E4%B8%8E%E4%BD%BF%E7%94%A8/</loc>
+    <lastmod>2018-01-12T08:36:54+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://wuhang-du.github.io/post/2018-1-3-%E5%85%B3%E4%BA%8Emongo%E7%9A%84%E4%B8%80%E4%BA%9B%E4%BD%93%E4%BC%9A/</loc>
     <lastmod>2018-01-03T08:36:54+00:00</lastmod>
   </url>
@@ -88,31 +98,38 @@
   </url>
   
   <url>
-    <loc>https://wuhang-du.github.io/categories/</loc>
+    <loc>https://wuhang-du.github.io/tags/base/</loc>
+    <lastmod>2018-01-22T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://wuhang-du.github.io/categories/development/</loc>
-    <lastmod>2017-07-26T08:36:54+00:00</lastmod>
+    <loc>https://wuhang-du.github.io/categories/base/</loc>
+    <lastmod>2018-01-22T08:36:54+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://wuhang-du.github.io/categories/</loc>
+    <lastmod>2018-01-22T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wuhang-du.github.io/tags/development/</loc>
-    <lastmod>2017-08-19T08:36:54+00:00</lastmod>
+    <lastmod>2018-01-12T08:36:54+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://wuhang-du.github.io/categories/development/</loc>
+    <lastmod>2018-01-12T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wuhang-du.github.io/</loc>
-    <lastmod>2018-01-03T08:36:54+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://wuhang-du.github.io/categories/golang/</loc>
-    <lastmod>2017-10-27T08:36:54+00:00</lastmod>
+    <lastmod>2018-01-22T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -123,8 +140,8 @@
   </url>
   
   <url>
-    <loc>https://wuhang-du.github.io/categories/mongo/</loc>
-    <lastmod>2018-01-03T08:36:54+00:00</lastmod>
+    <loc>https://wuhang-du.github.io/categories/golang/</loc>
+    <lastmod>2017-10-27T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -135,8 +152,8 @@
   </url>
   
   <url>
-    <loc>https://wuhang-du.github.io/categories/nodejs/</loc>
-    <lastmod>2017-08-14T08:36:54+00:00</lastmod>
+    <loc>https://wuhang-du.github.io/categories/mongo/</loc>
+    <lastmod>2018-01-03T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -147,8 +164,14 @@
   </url>
   
   <url>
+    <loc>https://wuhang-du.github.io/categories/nodejs/</loc>
+    <lastmod>2017-08-14T08:36:54+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>https://wuhang-du.github.io/post/</loc>
-    <lastmod>2018-01-03T08:36:54+00:00</lastmod>
+    <lastmod>2018-01-22T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -160,18 +183,18 @@
   
   <url>
     <loc>https://wuhang-du.github.io/tags/</loc>
-    <lastmod>2017-08-19T08:36:54+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://wuhang-du.github.io/categories/thinks/</loc>
-    <lastmod>2017-08-12T08:36:54+00:00</lastmod>
+    <lastmod>2018-01-22T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wuhang-du.github.io/tags/thinks/</loc>
+    <lastmod>2017-08-12T08:36:54+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://wuhang-du.github.io/categories/thinks/</loc>
     <lastmod>2017-08-12T08:36:54+00:00</lastmod>
     <priority>0</priority>
   </url>

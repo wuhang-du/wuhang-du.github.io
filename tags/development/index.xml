@@ -6,10 +6,24 @@
     <description>Recent content in Development on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 19 Aug 2017 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 12 Jan 2018 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/tags/development/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>火焰图的学习与使用</title>
+      <link>https://wuhang-du.github.io/post/2018-1-12-%E7%81%AB%E7%84%B0%E5%9B%BE%E7%9A%84%E5%AD%A6%E4%B9%A0%E4%B8%8E%E4%BD%BF%E7%94%A8/</link>
+      <pubDate>Fri, 12 Jan 2018 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2018-1-12-%E7%81%AB%E7%84%B0%E5%9B%BE%E7%9A%84%E5%AD%A6%E4%B9%A0%E4%B8%8E%E4%BD%BF%E7%94%A8/</guid>
+      <description>以nodejs 为例，学习火焰图相关。
+node &amp;ndash;perf-basic-prof-only-functions demo.js&amp;amp;
+perf record -F 99 -p pgrep -n node -g &amp;ndash; sleep 30
+perf script &amp;gt; nodestacks
+./stackcollapse-perf.pl &amp;lt; ../nodestacks | ./flamegraph.pl &amp;ndash;colors js &amp;gt; ../node-flamegraph.sv
+1.如何生成火焰图 即如何实现数据可视化。 -- 数据，可视化。 函数本身提供符号的解析。（可视化） 由perf工具定时去抓取调用栈的数据。（数据源） 统计调用次数，生成火焰图。（可视化） 2.如何分析火焰图 示例如下: 在外层一共调用了 d, e, f 几个方法，其中d-b-a,e-b-a,f-c-a为调用链, f 就是需要我们优化的“平顶山”，即占用了较多的cpu时间。 [d][ e ][ f ] [ b ][ c ] [ a ]  等到有具体的使用心得，再做进一步的更新。</description>
+    </item>
     
     <item>
       <title>Linux性能分析与监测</title>

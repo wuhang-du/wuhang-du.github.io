@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Base on Diamondu</title>
+    <link>https://wuhang-du.github.io/categories/base/</link>
+    <description>Recent content in Base on Diamondu</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 22 Jan 2018 08:36:54 +0000</lastBuildDate>
+    
+	<atom:link href="https://wuhang-du.github.io/categories/base/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Count Bits</title>
+      <link>https://wuhang-du.github.io/post/2018-1-22-count-bits/</link>
+      <pubDate>Mon, 22 Jan 2018 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2018-1-22-count-bits/</guid>
+      <description>在刷算法的时候遇到了好几个有趣的计算一个数中，bit位为1的个数。
+1.直接计算
+直接计算移位计算1.需要注意的是，输入参数。int 与 uint 的移位策略是不一样的。 int count(uint64 x) { int count = 0; for(; x; x&amp;gt;&amp;gt;1) ++count; return count; }  2.一点点小技巧
+利用（8）1000 - 1 = （7）0111. int count(uint64 x) { int count = 0; for (; x; ++count) x&amp;amp;=x-1; return count; }  3.分治
+const uint64 m1 = 0x5555555555555555; const uint64 m2 = 0x3333333333333333; const uint64 m4 = 0x0f0f0f0f0f0f0f0f; const uint64 m8 = 0x00ff00ff00ff00ff; const uint64 m16 = 0x0000ffff0000ffff; const uint64 m32 = 0x00000000ffffffff; int count(uint64 x) { x = (x &amp;amp; m1 ) + ((x &amp;gt;&amp;gt; 1) &amp;amp; m1 ); x = (x &amp;amp; m2 ) + ((x &amp;gt;&amp;gt; 2) &amp;amp; m2 ); x = (x &amp;amp; m4 ) + ((x &amp;gt;&amp;gt; 4) &amp;amp; m4 ); x = (x &amp;amp; m8 ) + ((x &amp;gt;&amp;gt; 8) &amp;amp; m8 ); x = (x &amp;amp; m16) + ((x &amp;gt;&amp;gt; 16) &amp;amp; m16); x = (x &amp;amp; m32) + ((x &amp;gt;&amp;gt; 32) &amp;amp; m32); return x; }  4.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -64,6 +64,131 @@
       
   <div class="post">
     <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2018-1-22-count-bits/">
+        Count Bits
+      </a>
+    </h1>
+
+    <span class="post-date">Mon, Jan 22, 2018</span>
+
+    <p>在刷算法的时候遇到了好几个有趣的计算一个数中，bit位为1的个数。</p>
+
+<p>1.直接计算</p>
+
+<pre><code>直接计算移位计算1.需要注意的是，输入参数。int 与 uint 的移位策略是不一样的。
+int count(uint64 x)
+{
+    int count = 0;
+    for(; x; x&gt;&gt;1)
+        ++count;
+    return count;
+}
+</code></pre>
+
+<p>2.一点点小技巧</p>
+
+<pre><code>利用（8）1000 - 1 = （7）0111.
+
+int count(uint64 x)
+{
+    int count = 0;
+    for (; x; ++count)
+        x&amp;=x-1;
+    return count;
+}
+</code></pre>
+
+<p>3.分治</p>
+
+<pre><code>const uint64 m1  = 0x5555555555555555;
+const uint64 m2  = 0x3333333333333333;
+const uint64 m4  = 0x0f0f0f0f0f0f0f0f;
+const uint64 m8  = 0x00ff00ff00ff00ff;
+const uint64 m16 = 0x0000ffff0000ffff;
+const uint64 m32 = 0x00000000ffffffff;
+
+int count(uint64 x) {
+    x = (x &amp; m1 ) + ((x &gt;&gt;  1) &amp; m1 );  
+    x = (x &amp; m2 ) + ((x &gt;&gt;  2) &amp; m2 ); 
+    x = (x &amp; m4 ) + ((x &gt;&gt;  4) &amp; m4 ); 
+    x = (x &amp; m8 ) + ((x &gt;&gt;  8) &amp; m8 ); 
+    x = (x &amp; m16) + ((x &gt;&gt; 16) &amp; m16); 
+    x = (x &amp; m32) + ((x &gt;&gt; 32) &amp; m32); 
+    return x;
+}
+</code></pre>
+
+<p>4.优化后的分治</p>
+
+<pre><code>int count(uint64 x) {
+    x -= (x &gt;&gt; 1) &amp; m1;              // 2 * a + b - a = a + b
+    x = (x &amp; m2) + ((x &gt;&gt; 2) &amp; m2);  // 10 + 10 = 100 因此，会产生进位，所以为进位做好准备。
+    x = (x + (x &gt;&gt; 4)) &amp; m4;         // 最大是 0100 0100 = 1000 不会进位，因此可以先做加法再做与。
+    x += x &gt;&gt;  8;                    // 不做与 运算。8位 已经表示 256, 
+                                    // 在8位相加时，正确的和已经加在后8位了，前8位与后8位互不影响。
+    x += x &gt;&gt; 16; 
+    x += x &gt;&gt; 32;  
+    return x &amp; 0x7f;
+}
+</code></pre>
+
+<p>5.再次优化</p>
+
+<pre><code>int count(uint64 x) {
+    x -= (x &gt;&gt; 1) &amp; m1;  
+    x = (x &amp; m2) + ((x &gt;&gt; 2) &amp; m2);
+    x = (x + (x &gt;&gt; 4)) &amp; m4;    
+    return (x * h01)&gt;&gt;56;   // 神来之笔
+}
+</code></pre>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2018-1-12-%E7%81%AB%E7%84%B0%E5%9B%BE%E7%9A%84%E5%AD%A6%E4%B9%A0%E4%B8%8E%E4%BD%BF%E7%94%A8/">
+        火焰图的学习与使用
+      </a>
+    </h1>
+
+    <span class="post-date">Fri, Jan 12, 2018</span>
+
+    <p>以nodejs 为例，学习火焰图相关。</p>
+
+<p>node &ndash;perf-basic-prof-only-functions demo.js&amp;</p>
+
+<p>perf record -F 99 -p <code>pgrep -n node</code> -g &ndash; sleep 30</p>
+
+<p>perf script &gt; nodestacks</p>
+
+<p>./stackcollapse-perf.pl &lt; ../nodestacks | ./flamegraph.pl &ndash;colors js &gt; ../node-flamegraph.sv</p>
+
+<pre><code>1.如何生成火焰图
+即如何实现数据可视化。 -- 数据，可视化。
+
+函数本身提供符号的解析。（可视化）
+由perf工具定时去抓取调用栈的数据。（数据源）
+统计调用次数，生成火焰图。（可视化）
+
+
+2.如何分析火焰图
+
+示例如下:
+在外层一共调用了 d, e, f 几个方法，其中d-b-a,e-b-a,f-c-a为调用链,
+f 就是需要我们优化的“平顶山”，即占用了较多的cpu时间。
+
+[d][ e ][  f  ]
+[  b   ][  c  ]
+[      a      ]
+
+</code></pre>
+
+<p>等到有具体的使用心得，再做进一步的更新。</p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="https://wuhang-du.github.io/post/2018-1-3-%E5%85%B3%E4%BA%8Emongo%E7%9A%84%E4%B8%80%E4%BA%9B%E4%BD%93%E4%BC%9A/">
         关于mongo的一些体会
       </a>

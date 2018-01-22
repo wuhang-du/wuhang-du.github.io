@@ -6,14 +6,24 @@
     <description>Recent content in Categories on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
+    <lastBuildDate>Mon, 22 Jan 2018 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
+      <title>Base</title>
+      <link>https://wuhang-du.github.io/categories/base/</link>
+      <pubDate>Mon, 22 Jan 2018 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/categories/base/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Development</title>
       <link>https://wuhang-du.github.io/categories/development/</link>
-      <pubDate>Wed, 26 Jul 2017 08:36:54 +0000</pubDate>
+      <pubDate>Fri, 12 Jan 2018 08:36:54 +0000</pubDate>
       
       <guid>https://wuhang-du.github.io/categories/development/</guid>
       <description></description>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+	<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
 <head>
   <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
@@ -10,7 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 
   
-  <title>Tags &middot; Diamondu</title>
+  <title>火焰图的学习与使用 &middot; Diamondu</title>
   
 
   
@@ -24,12 +24,11 @@
   <link rel="shortcut icon" href="/favicon.png">
 
   
-  <link href="https://wuhang-du.github.io/tags/index.xml" rel="alternate" type="application/rss+xml" title="Diamondu" />
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
 </head>
 
-<body class=" layout-reverse">
-
-<div class="sidebar">
+	<body class=" layout-reverse">
+		<div class="sidebar">
   <div class="container">
     <div class="sidebar-about">
       <script>
@@ -58,27 +57,44 @@
   </div>
 </div>
 
-  <div class="content container">
-  <h1> tags </h1>
-    <div class="posts">
-    	<ul class="archive">
-            
-            <li><a href="base/">base</a> 1</li>
-            
-            <li><a href="development/">development</a> 5</li>
-            
-            <li><a href="golang/">golang</a> 9</li>
-            
-            <li><a href="mongo/">mongo</a> 2</li>
-            
-            <li><a href="nodejs/">nodejs</a> 2</li>
-            
-            <li><a href="proxy/">proxy</a> 1</li>
-            
-            <li><a href="thinks/">thinks</a> 1</li>
-            
-        </ul>
-    </div>
-  </div>
-</body>
+		<div class="content container">
+			<div class="post">
+			 	<h1>火焰图的学习与使用</h1>
+			  <span class="post-date">Fri ,Jan 12 ,2018</span>
+			      <p>以nodejs 为例，学习火焰图相关。</p>
+
+<p>node &ndash;perf-basic-prof-only-functions demo.js&amp;</p>
+
+<p>perf record -F 99 -p <code>pgrep -n node</code> -g &ndash; sleep 30</p>
+
+<p>perf script &gt; nodestacks</p>
+
+<p>./stackcollapse-perf.pl &lt; ../nodestacks | ./flamegraph.pl &ndash;colors js &gt; ../node-flamegraph.sv</p>
+
+<pre><code>1.如何生成火焰图
+即如何实现数据可视化。 -- 数据，可视化。
+
+函数本身提供符号的解析。（可视化）
+由perf工具定时去抓取调用栈的数据。（数据源）
+统计调用次数，生成火焰图。（可视化）
+
+
+2.如何分析火焰图
+
+示例如下:
+在外层一共调用了 d, e, f 几个方法，其中d-b-a,e-b-a,f-c-a为调用链,
+f 就是需要我们优化的“平顶山”，即占用了较多的cpu时间。
+
+[d][ e ][  f  ]
+[  b   ][  c  ]
+[      a      ]
+
+</code></pre>
+
+<p>等到有具体的使用心得，再做进一步的更新。</p>
+
+			</div>
+		</div>
+		
+  </body>
 </html>
