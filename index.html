@@ -64,6 +64,122 @@
       
   <div class="post">
     <h1 class="post-title">
+      <a href="https://wuhang-du.github.io/post/2018-2-24-%E4%BB%8E%E4%B8%80%E9%81%93dp%E7%AE%97%E6%B3%95%E9%A2%98%E8%AF%B4%E8%B5%B7/">
+        从一道dp算法题说起
+      </a>
+    </h1>
+
+    <span class="post-date">Sat, Feb 24, 2018</span>
+
+    <p>被这道leetcode题目<a href="https://leetcode.com/problems/longest-palindromic-subsequence/description/">516. Longest Palindromic Subsequence</a>折腾良久，直到最后弄清楚它，才大呼奇妙。
+算法与思维的神奇，大概就在此处。</p>
+
+<p><a href="http://www.hawstein.com/posts/dp-novice-to-advanced.html">这篇文章</a>不错，可以作为入门。</p>
+
+<p>1.题目分析</p>
+
+<p>动态规划的关键就是得出状态与状态转移方程。</p>
+
+<pre><code>这道题我的第一个问题就是：没有想清楚，为什么它是一个二维的状态?
+
+一维与二维的区别就在于状态之间的转换。
+对于这道题而言，以一个字符为例，它可以通过左边增加字符或者右边增加字符，进入下一个状态.
+由现有的状态有超过1种途径进入下一个状态。因为它是二（多）维的。
+</code></pre>
+
+<p>这道题的状态转移方程如下：</p>
+
+<pre><code>dp[i][j] = dp[i+1][j-1] + 2 if s.charAt(i) == s.charAt(j)
+otherwise, dp[i][j] = Math.max(dp[i+1][j], dp[i][j-1])
+Initialization: dp[i][i] = 1
+</code></pre>
+
+<p>2.代码分析。</p>
+
+<p>看到上面的状态转移方程，很容易就可以得到递归的办法。</p>
+
+<pre><code>func longestPalindromeSubseq(s string) int {
+    return check([]byte(s)) 
+}
+
+func check(s []byte) int {
+    if s[0] == s[len(s)-1] {
+        return 2 + check(s[1:len(s)-1])
+    }else {
+        a := check(s[0:len(s)-1])
+        b := check(s[1:len(s)])
+        if b &gt; a {
+            a = b
+        }
+        return a
+    }
+}
+
+这样是过不了的。加上缓存，去掉重复的计算，accepted.
+</code></pre>
+
+<p>接下来，其实也就是一个递归转化成循环的问题。按照上述的状态转移方程，以abcd为例，要算abcd,必须先算出abc和bcd,则必须先算出ab,bc,cd，则必须先算出a,b,c,d。单个字符已知就是1.所以，可以得到以下的代码。</p>
+
+<pre><code>func longestPalindromeSubseq(s string) int {
+    n := len(s)
+    dp := make([][]int, n)
+    for i := range dp {
+        dp[i] = make([]int, n)
+        dp[i][i] = 1
+    }
+
+    for Len := 2; Len &lt;= n; Len++ {
+        for i := 0; i+Len-1 &lt; n; i++ {
+            j := i + Len - 1
+            if s[i] == s[j] {
+                dp[i][j] = dp[i+1][j-1] + 2
+            } else {
+                dp[i][j] = max(dp[i+1][j], dp[i][j-1])
+            }
+        }
+    }
+
+    return dp[0][n-1]
+}
+</code></pre>
+
+<p>进一步，研究状态转移方程，可以发现dp[i][j]只与dp[i+1][j-1],dp[i+1][j], dp[i][j-1]这几个量有关系，即要算出i，须先算出i+1.要算出j,须先算出j-1.
+同时，想象一个二维的长方形，我们知道对角线上的每一个值。</p>
+
+<pre><code>每一个位置表示： 从本行左侧为1的字符起，到该字符位置的最大的回文字符个数。
+| 1| c| c| c| // i层第四次循环 j层循环三次
+|  | 1| b| b| // i层第三次循环 j层循环二次
+|  |  | 1| a| // i层第二次循环 j层循环一次
+|  |  |  | 1| // i层第一次循环 j层循环跳出
+</code></pre>
+
+<p>因此，双层循环嵌套，i由大变小，j由小变大。</p>
+
+<pre><code>dp := make([]int, n)
+cur := make([]int, n)
+
+for i := length-1;i &gt;= 0; i-- {
+    cur[i] = 1
+    for j := i+1; j &lt; length; j++ {
+        if s[i] == s[j] {
+            // 最是神奇的一步
+            cur[j] = dp[j-1] + 2
+        }else {
+            cur[j] = max(cur[j-1],dp[j])
+        }
+    }
+    dp, cur = cur, dp
+} 
+</code></pre>
+
+<p>最后两份代码，只是循环的方式不同而已。代码二是可以采用代码三的双数组缓存去优化的。</p>
+
+<p>直到最终的代码出来，才发现，最终的代码就是最开始状态转移方程最原始的体现。简单即是大美。</p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="https://wuhang-du.github.io/post/2018-1-22-count-bits/">
         Count Bits
       </a>

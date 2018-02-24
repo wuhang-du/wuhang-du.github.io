@@ -6,10 +6,26 @@
     <description>Recent content in Base on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 22 Jan 2018 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 24 Feb 2018 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/categories/base/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>从一道dp算法题说起</title>
+      <link>https://wuhang-du.github.io/post/2018-2-24-%E4%BB%8E%E4%B8%80%E9%81%93dp%E7%AE%97%E6%B3%95%E9%A2%98%E8%AF%B4%E8%B5%B7/</link>
+      <pubDate>Sat, 24 Feb 2018 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2018-2-24-%E4%BB%8E%E4%B8%80%E9%81%93dp%E7%AE%97%E6%B3%95%E9%A2%98%E8%AF%B4%E8%B5%B7/</guid>
+      <description>被这道leetcode题目516. Longest Palindromic Subsequence折腾良久，直到最后弄清楚它，才大呼奇妙。 算法与思维的神奇，大概就在此处。
+这篇文章不错，可以作为入门。
+1.题目分析
+动态规划的关键就是得出状态与状态转移方程。
+这道题我的第一个问题就是：没有想清楚，为什么它是一个二维的状态? 一维与二维的区别就在于状态之间的转换。 对于这道题而言，以一个字符为例，它可以通过左边增加字符或者右边增加字符，进入下一个状态. 由现有的状态有超过1种途径进入下一个状态。因为它是二（多）维的。  这道题的状态转移方程如下：
+dp[i][j] = dp[i+1][j-1] + 2 if s.charAt(i) == s.charAt(j) otherwise, dp[i][j] = Math.max(dp[i+1][j], dp[i][j-1]) Initialization: dp[i][i] = 1  2.代码分析。
+看到上面的状态转移方程，很容易就可以得到递归的办法。
+func longestPalindromeSubseq(s string) int { return check([]byte(s)) } func check(s []byte) int { if s[0] == s[len(s)-1] { return 2 + check(s[1:len(s)-1]) }else { a := check(s[0:len(s)-1]) b := check(s[1:len(s)]) if b &amp;gt; a { a = b } return a } } 这样是过不了的。加上缓存，去掉重复的计算，accepted.</description>
+    </item>
     
     <item>
       <title>Count Bits</title>
