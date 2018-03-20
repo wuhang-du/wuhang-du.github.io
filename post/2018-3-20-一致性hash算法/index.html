@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+	<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
 <head>
   <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
@@ -10,7 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 
   
-  <title>Base &middot; Diamondu</title>
+  <title>一致性hash算法 &middot; Diamondu</title>
   
 
   
@@ -24,12 +24,11 @@
   <link rel="shortcut icon" href="/favicon.png">
 
   
-  <link href="https://wuhang-du.github.io/tags/base/index.xml" rel="alternate" type="application/rss+xml" title="Diamondu" />
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
 </head>
 
-<body class=" layout-reverse">
-
-<div class="sidebar">
+	<body class=" layout-reverse">
+		<div class="sidebar">
   <div class="container">
     <div class="sidebar-about">
       <script>
@@ -58,24 +57,60 @@
   </div>
 </div>
 
-  <div class="content container">
-    <div class="posts">
-    	<ul class="archive">
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2018-3-20-%E4%B8%80%E8%87%B4%E6%80%A7hash%E7%AE%97%E6%B3%95/">一致性hash算法</a> <time class="pull-right post-list">Tue ,Mar 20 ,2018</time></span>
-        </li>
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2018-2-24-%E4%BB%8E%E4%B8%80%E9%81%93dp%E7%AE%97%E6%B3%95%E9%A2%98%E8%AF%B4%E8%B5%B7/">从一道dp算法题说起</a> <time class="pull-right post-list">Sat ,Feb 24 ,2018</time></span>
-        </li>
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2018-1-22-count-bits/">Count Bits</a> <time class="pull-right post-list">Mon ,Jan 22 ,2018</time></span>
-        </li>
-        
-        </ul>
-    </div>
-  </div>
-</body>
+		<div class="content container">
+			<div class="post">
+			 	<h1>一致性hash算法</h1>
+			  <span class="post-date">Tue ,Mar 20 ,2018</span>
+			      <p>看资料，了解到一致性hash算法。<br />
+简单的写了一个demo, 测试之后，再去看其他人的算法，理解得更快一些。这是一个好的模式。</p>
+
+<pre><code>func main() {
+    hash := make([]string, 8)
+    mask := (1 &lt;&lt; 3) - 1
+
+    hash[2] = &quot;server1&quot;
+    hash[5] = &quot;server2&quot;
+    hash[7] = &quot;server3&quot;
+
+    i := 50
+    index := 0
+    for i &lt; 58 {
+        i++
+        index = i &amp; mask
+        for {
+            if hash[index] != &quot;&quot; {
+                fmt.Println(&quot;find server: &quot;, hash[index])
+                break
+            }
+            index = (index + 1) &amp; mask
+        }
+    }
+}
+</code></pre>
+
+<p>github上搜到一个golang版本的<a href="https://github.com/stathat/consistent">代码</a></p>
+
+<p>本质上是一样的。实现上有一些不同。使用数组 找机器+存机器 会浪费空间。<br />
+而这个版本将数组下标单独拿出来，一个是排好序的数组下标用来找机器，一个是map[uint32]string用来存机器。</p>
+
+<pre><code>type Consistent struct {
+    circle           map[uint32]string   // 存机器。
+    members          map[string]bool
+    sortedHashes     uints               // 找机器
+    NumberOfReplicas int                 // 节点复制个数，使得节点分布更均匀。
+    count            int64
+    scratch          [64]byte            // buf
+    sync.RWMutex
+}
+</code></pre>
+
+<p>圆形，真是神奇。<br />
+想想有没有其他什么地方能用到圆形？<br />
+环形缓冲区。<br />
+想到了再加。</p>
+
+			</div>
+		</div>
+		
+  </body>
 </html>

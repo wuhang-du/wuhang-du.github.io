@@ -6,10 +6,22 @@
     <description>Recent content in Posts on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 24 Feb 2018 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 20 Mar 2018 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>一致性hash算法</title>
+      <link>https://wuhang-du.github.io/post/2018-3-20-%E4%B8%80%E8%87%B4%E6%80%A7hash%E7%AE%97%E6%B3%95/</link>
+      <pubDate>Tue, 20 Mar 2018 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2018-3-20-%E4%B8%80%E8%87%B4%E6%80%A7hash%E7%AE%97%E6%B3%95/</guid>
+      <description>看资料，了解到一致性hash算法。
+简单的写了一个demo, 测试之后，再去看其他人的算法，理解得更快一些。这是一个好的模式。
+func main() { hash := make([]string, 8) mask := (1 &amp;lt;&amp;lt; 3) - 1 hash[2] = &amp;quot;server1&amp;quot; hash[5] = &amp;quot;server2&amp;quot; hash[7] = &amp;quot;server3&amp;quot; i := 50 index := 0 for i &amp;lt; 58 { i++ index = i &amp;amp; mask for { if hash[index] != &amp;quot;&amp;quot; { fmt.Println(&amp;quot;find server: &amp;quot;, hash[index]) break } index = (index + 1) &amp;amp; mask } } }  github上搜到一个golang版本的代码
+本质上是一样的。实现上有一些不同。使用数组 找机器+存机器 会浪费空间。</description>
+    </item>
     
     <item>
       <title>从一道dp算法题说起</title>
