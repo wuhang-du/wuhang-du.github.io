@@ -286,7 +286,7 @@ f, err := os.Open(name) (some other code...) d, err := f.Stat()  在上述的代
       <guid>https://wuhang-du.github.io/about/</guid>
       <description>喜欢C语言，喜欢Unix以及Unix的文化
 正在学习Go.
-希望自己能越来越厉害
+希望自己能越来越厉害。
 2017-5-12 0:38 于北京</description>
     </item>
     
