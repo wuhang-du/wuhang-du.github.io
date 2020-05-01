@@ -6,7 +6,7 @@
     <description>Recent content in Tags on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 20 Mar 2018 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 01 May 2020 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,7 +14,7 @@
     <item>
       <title>Base</title>
       <link>https://wuhang-du.github.io/tags/base/</link>
-      <pubDate>Tue, 20 Mar 2018 08:36:54 +0000</pubDate>
+      <pubDate>Fri, 01 May 2020 08:36:54 +0000</pubDate>
       
       <guid>https://wuhang-du.github.io/tags/base/</guid>
       <description></description>
@@ -62,6 +62,15 @@
       <pubDate>Thu, 15 Jun 2017 08:36:54 +0000</pubDate>
       
       <guid>https://wuhang-du.github.io/tags/proxy/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Shell</title>
+      <link>https://wuhang-du.github.io/tags/shell/</link>
+      <pubDate>Fri, 01 May 2020 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/tags/shell/</guid>
       <description></description>
     </item>
     

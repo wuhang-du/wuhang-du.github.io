@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+	<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
 <head>
   <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
@@ -10,7 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 
   
-  <title>Base &middot; Diamondu</title>
+  <title>看SICP有感 &middot; Diamondu</title>
   
 
   
@@ -24,12 +24,11 @@
   <link rel="shortcut icon" href="/favicon.png">
 
   
-  <link href="https://wuhang-du.github.io/categories/base/index.xml" rel="alternate" type="application/rss+xml" title="Diamondu" />
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
 </head>
 
-<body class=" layout-reverse">
-
-<div class="sidebar">
+	<body class=" layout-reverse">
+		<div class="sidebar">
   <div class="container">
     <div class="sidebar-about">
       <script>
@@ -58,32 +57,50 @@
   </div>
 </div>
 
-  <div class="content container">
-    <div class="posts">
-    	<ul class="archive">
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2020-5-1-tcpdump%E7%9A%84%E9%AB%98%E7%BA%A7%E7%94%A8%E6%B3%95/">tcpdump的高级用法</a> <time class="pull-right post-list">Fri ,May 1 ,2020</time></span>
-        </li>
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2020-4-18-sicp/">看SICP有感</a> <time class="pull-right post-list">Sat ,Apr 18 ,2020</time></span>
-        </li>
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2018-3-20-%E4%B8%80%E8%87%B4%E6%80%A7hash%E7%AE%97%E6%B3%95/">一致性hash算法</a> <time class="pull-right post-list">Tue ,Mar 20 ,2018</time></span>
-        </li>
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2018-2-24-%E4%BB%8E%E4%B8%80%E9%81%93dp%E7%AE%97%E6%B3%95%E9%A2%98%E8%AF%B4%E8%B5%B7/">从一道dp算法题说起</a> <time class="pull-right post-list">Sat ,Feb 24 ,2018</time></span>
-        </li>
-        
-        <li>
-          <span><a href="https://wuhang-du.github.io/post/2018-1-22-count-bits/">Count Bits</a> <time class="pull-right post-list">Mon ,Jan 22 ,2018</time></span>
-        </li>
-        
-        </ul>
-    </div>
-  </div>
-</body>
+		<div class="content container">
+			<div class="post">
+			 	<h1>看SICP有感</h1>
+			  <span class="post-date">Sat ,Apr 18 ,2020</span>
+			      <p>17年最早是开始读sicp的pdf.看文本的效果比较一般,不太好抓重点,再一个编程的经验比较缺乏.<br />
+19年11月份的时候,从b站看到了sicp的视频,看了一遍.<br />
+20年4月,再次出发.有感于大型的系统设计,基于此,再次观看sicp,以此博客记录观看过程的思考.</p>
+
+<p>lec1a: Lisp概览</p>
+
+<pre><code>对一门通用语言的学习,需要关注的几个点:
+1.基本的元素: +,-,*,/  数字.
+2.组合: conds,if
+3.抽象的方式: define
+</code></pre>
+
+<p>lec2a: 高阶过程</p>
+
+<pre><code>抽象模式。举个简单的例子：
+过程1：for(a= i-&gt;j) sum(a)
+过程2：for(a= i-&gt;j) sum(a^2)
+for与sum就是共同的模式，即可以被抽象的地方。
+
+
+编程语言一等公民的权力：
+1.可以被变量命名
+2.可以被当作过程参数传递。
+3.可以被当作过程的返回值。
+4.可以被数据结构包含。
+</code></pre>
+
+<p>lec2b: 复合数据</p>
+
+<pre><code>数据和函数之间本身没有严格的界限。
+c = (cons a b)
+(car c) = a
+(cdr c) = b
+
+可以认为是一个内存的结构体布局。
+也可以认为一个闭包函数。
+</code></pre>
+
+			</div>
+		</div>
+		
+  </body>
 </html>

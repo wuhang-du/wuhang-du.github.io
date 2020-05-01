@@ -6,10 +6,39 @@
     <description>Recent content in Base on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 20 Mar 2018 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 01 May 2020 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/tags/base/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>tcpdump的高级用法</title>
+      <link>https://wuhang-du.github.io/post/2020-5-1-tcpdump%E7%9A%84%E9%AB%98%E7%BA%A7%E7%94%A8%E6%B3%95/</link>
+      <pubDate>Fri, 01 May 2020 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2020-5-1-tcpdump%E7%9A%84%E9%AB%98%E7%BA%A7%E7%94%A8%E6%B3%95/</guid>
+      <description>tcpdump是linux平台的，基于bpf的抓包工具。
+比较常见的用法是： tcpdump -i eth1 tcp port 80
+前几天在工作中遇到一个问题：线上的redis库，因为HGET命令中包含特殊字符报错。
+不能确定是哪个模块引入的问题。
+问题描述： tcp 7700 端口接收外部的查询命令, 同时包含多个redis命令字。 当前：只有 HGET 命令字有问题，且出错的字符串多是 a 域名。  抓全部的包去找有问题的场景简直大海捞针，因此让我们见识下tcpdump的新魔法：
+tcpdump -i any &#39;tcp port 7700 and (((ip[2:2] - ((ip[0]&amp;amp;0xf)&amp;lt;&amp;lt;2)) - ((tcp[12]&amp;amp;0xf0)&amp;gt;&amp;gt;2)) != 0) and (tcp[25] == 0x34) and (tcp[28] == 0x48) and (tcp[29] == 0x47) and (tcp[30] == 0x45) and (tcp[31] == 0x54)&#39; -nnn -vvv -w 49.7700.pcap ====基础知识： ip[2:2] 以2起，2个字节表示包长度 (ip[0]&amp;amp;0xf)&amp;lt;&amp;lt;2 第一个字节 前4bit是协议 后4bit 乘以4 是ip包头大小。 tcp[12]&amp;amp;0xf0&amp;gt;&amp;gt;2 高位4bit是长度 tcp[0-19]表示包头，自tcp 20个字节起是 payload.</description>
+    </item>
+    
+    <item>
+      <title>看SICP有感</title>
+      <link>https://wuhang-du.github.io/post/2020-4-18-sicp/</link>
+      <pubDate>Sat, 18 Apr 2020 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2020-4-18-sicp/</guid>
+      <description>17年最早是开始读sicp的pdf.看文本的效果比较一般,不太好抓重点,再一个编程的经验比较缺乏.
+19年11月份的时候,从b站看到了sicp的视频,看了一遍.
+20年4月,再次出发.有感于大型的系统设计,基于此,再次观看sicp,以此博客记录观看过程的思考.
+lec1a: Lisp概览
+对一门通用语言的学习,需要关注的几个点: 1.基本的元素: +,-,*,/ 数字. 2.组合: conds,if 3.抽象的方式: define  lec2a: 高阶过程
+抽象模式。举个简单的例子： 过程1：for(a= i-&amp;gt;j) sum(a) 过程2：for(a= i-&amp;gt;j) sum(a^2) for与sum就是共同的模式，即可以被抽象的地方。 编程语言一等公民的权力： 1.可以被变量命名 2.可以被当作过程参数传递。 3.可以被当作过程的返回值。 4.可以被数据结构包含。  lec2b: 复合数据
+数据和函数之间本身没有严格的界限。 c = (cons a b) (car c) = a (cdr c) = b 可以认为是一个内存的结构体布局。 也可以认为一个闭包函数。  </description>
+    </item>
     
     <item>
       <title>一致性hash算法</title>
