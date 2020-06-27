@@ -6,10 +6,47 @@
     <description>Recent content on Diamondu</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 01 May 2020 08:36:54 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 26 Jun 2020 08:36:54 +0000</lastBuildDate>
     
 	<atom:link href="https://wuhang-du.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>读阿里-操作系统内核开发实战总结</title>
+      <link>https://wuhang-du.github.io/post/2020-6-26-%E8%AF%BB%E9%98%BF%E9%87%8C-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%86%85%E6%A0%B8%E5%BC%80%E5%8F%91%E5%AE%9E%E6%88%98%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Fri, 26 Jun 2020 08:36:54 +0000</pubDate>
+      
+      <guid>https://wuhang-du.github.io/post/2020-6-26-%E8%AF%BB%E9%98%BF%E9%87%8C-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%86%85%E6%A0%B8%E5%BC%80%E5%8F%91%E5%AE%9E%E6%88%98%E6%80%BB%E7%BB%93/</guid>
+      <description>资料来源是之前北邮人论坛下载的ppt.
+是由伯松(阿里集团)和王智通(阿里云)做的整理的内部分享。
+如作者所言，学习者需要关注的是概念，具体的实现有很多种。因此整理这篇博客，在ppt的基础上再做一些个人层面的总结。
+1.内核加载 在一台已经关机的电脑前，我们拥有什么？
+a.硬盘，存储着操作系统的内核程序。 b.cpu及寄存器。 c.内存。  概念1：去哪里找内核程序。 bootloader如linux grub去硬盘约定好的地方去读（印象里是第一个分区的第一个扇区？）。
+#问题1.去哪里找第一个内核函数？
+linux boot protocol. 提前约定好格式或者说是协议。
+概念2：内核的第一个c函数调用前的必要条件。
+cpu与寄存器的状态，基本内存布局。满足c语言条件即可。
+一旦进入c语言，则整个进入了代码可视可控阶段。
+2.保护模式基础 内核设计中需要考虑的几个概念：
+1.权限控制。2.寻址方式。3.中断处理。4.进程调度。  概念1：权限控制主要是在寻址的时候做。
+页表的bit2 U/S标志位。1是user. 0是sup.
+一个程序的地址空间分为两个部分：用户态与内核态。
+概念2：页表的生成：
+内核的页表在加载内核时已经完成。
+用户态的程序在启动时，依赖一些系统调用构建自己的页表。
+概念3：线性地址，物理地址。
+依靠cr3寄存器，保留着页表自身的位置。
+假设一个线性地址： 31--------22 21------12 11-------0 pde pte offset  概念4：中断/异常。
+中断：外部硬件或者软件INT n(软中断?)。
+异常：执行过程中探测到错误的指令。
+概念5: 中断响应的流程。
+“好好的吃着火锅，唱着歌，夯的来了一个中断！”
+主要是上下文切换。一部分是cpu在中断时存储/恢复，一部分是中断程序来存储恢复。
+两种情况： 1.中断时处于用户态：代码段寄存器，栈指针得留着（SS,ESP）。 另外要进入内核态，用户栈的地址与状态也得留着（EFLAGS/CS/EIP/error Code）。 2.中断时处于内核态：只需要栈切换（EFLAGS/CS/EIP/error Code）  因为中断时，已经保存好了前一个程序的状态，所以中断回来之后，可以发生进程调度。
+概念6：进程调度。
+1.地址空间：基于页表的寻址保护方式，所以要切回自己的页表。 2.栈：当时执行到哪里停了，接下来继续执行，当时的状态是什么。寄存器+栈就ok了。 问题：内核栈能否单个核只有一个？ 挂在单个程序上的话，就意味着在内核态，这个程序的事情也可以被抢占。 可以参考golang单个p的g0栈。  3.系统调用 概念1：消息传递机制
+linux：EAX寄存器为系统调用号 MLXOS: 整个封装成消息体，包含：系统调用号，参数格式，接收者。  概念2：系统调用的过程梳理：</description>
+    </item>
     
     <item>
       <title>tcpdump的高级用法</title>

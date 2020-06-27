@@ -1,0 +1,238 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <meta name="google-site-verification" content="Iyg17jG_iEIvXcYVpnHytxt5poJ5eE8HLaJP5Pi9GCw" />
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.25.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>读阿里-操作系统内核开发实战总结 &middot; Diamondu</title>
+  
+
+  
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://wuhang-du.github.io/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="312x312" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Diamondu" />
+</head>
+
+	<body class=" layout-reverse">
+		<div class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-103633504-1', 'auto');
+      ga('send', 'pageview');
+      </script>
+      <a href="https://wuhang-du.github.io/"><h1>Diamondu</h1></a>
+      <p class="lead">
+      在搬砖中迷失自我，在搬砖中找到自我<br></br><br></br>
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      <li><a href="/post/">Articles</a> </li>
+      <li><a href="/tags/">Tags</a> </li>
+      <li><a href="/about/">About</a> </li>
+      <li><a href="https://github.com/wuhang-du">Github</a></li>
+    </ul>
+
+    <p>&copy; du. All rights reserved. </p>
+  </div>
+</div>
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>读阿里-操作系统内核开发实战总结</h1>
+			  <span class="post-date">Fri ,Jun 26 ,2020</span>
+			      
+
+<p>资料来源是之前北邮人论坛下载的ppt.<br />
+是由伯松(阿里集团)和王智通(阿里云)做的整理的内部分享。<br />
+如作者所言，学习者需要关注的是概念，具体的实现有很多种。因此整理这篇博客，在ppt的基础上再做一些个人层面的总结。</p>
+
+<h3 id="1-内核加载">1.内核加载</h3>
+
+<p>在一台已经关机的电脑前，我们拥有什么？</p>
+
+<pre><code>a.硬盘，存储着操作系统的内核程序。
+b.cpu及寄存器。
+c.内存。
+</code></pre>
+
+<p>概念1：去哪里找内核程序。
+bootloader如linux grub去硬盘约定好的地方去读（印象里是第一个分区的第一个扇区？）。<br />
+#问题1.去哪里找第一个内核函数？<br />
+linux boot protocol. 提前约定好格式或者说是协议。</p>
+
+<p>概念2：内核的第一个c函数调用前的必要条件。<br />
+cpu与寄存器的状态，基本内存布局。满足c语言条件即可。<br />
+一旦进入c语言，则整个进入了代码可视可控阶段。</p>
+
+<h3 id="2-保护模式基础">2.保护模式基础</h3>
+
+<p>内核设计中需要考虑的几个概念：</p>
+
+<pre><code>1.权限控制。2.寻址方式。3.中断处理。4.进程调度。  
+
+</code></pre>
+
+<p>概念1：权限控制主要是在寻址的时候做。<br />
+页表的bit2 U/S标志位。1是user. 0是sup.<br />
+一个程序的地址空间分为两个部分：用户态与内核态。</p>
+
+<p>概念2：页表的生成：<br />
+内核的页表在加载内核时已经完成。<br />
+用户态的程序在启动时，依赖一些系统调用构建自己的页表。</p>
+
+<p>概念3：线性地址，物理地址。<br />
+依靠cr3寄存器，保留着页表自身的位置。</p>
+
+<pre><code>假设一个线性地址：  
+31--------22 21------12 11-------0
+   pde           pte        offset
+</code></pre>
+
+<p>概念4：中断/异常。<br />
+中断：外部硬件或者软件INT n(软中断?)。<br />
+异常：执行过程中探测到错误的指令。</p>
+
+<p>概念5: 中断响应的流程。<br />
+“好好的吃着火锅，唱着歌，夯的来了一个中断！”<br />
+主要是上下文切换。一部分是cpu在中断时存储/恢复，一部分是中断程序来存储恢复。</p>
+
+<pre><code>两种情况：
+1.中断时处于用户态：代码段寄存器，栈指针得留着（SS,ESP）。
+另外要进入内核态，用户栈的地址与状态也得留着（EFLAGS/CS/EIP/error Code）。
+2.中断时处于内核态：只需要栈切换（EFLAGS/CS/EIP/error Code）
+</code></pre>
+
+<p>因为中断时，已经保存好了前一个程序的状态，所以中断回来之后，可以发生进程调度。</p>
+
+<p>概念6：进程调度。</p>
+
+<pre><code>1.地址空间：基于页表的寻址保护方式，所以要切回自己的页表。
+2.栈：当时执行到哪里停了，接下来继续执行，当时的状态是什么。寄存器+栈就ok了。
+
+问题：内核栈能否单个核只有一个？  
+挂在单个程序上的话，就意味着在内核态，这个程序的事情也可以被抢占。
+可以参考golang单个p的g0栈。
+</code></pre>
+
+<h3 id="3-系统调用">3.系统调用</h3>
+
+<p>概念1：消息传递机制</p>
+
+<pre><code>linux：EAX寄存器为系统调用号
+MLXOS: 整个封装成消息体，包含：系统调用号，参数格式，接收者。
+</code></pre>
+
+<p>概念2：系统调用的过程梳理：</p>
+
+<pre><code>1.按照接口定义将参数准备好。寄存器/栈的分布等
+2.调用中断命令。
+3.代码段由中断门转换。数据段：先是把当前程序的寄存器等数据入栈，然后切换数据段为内核数据段。
+4.内核执行操作。
+5.反馈执行的结果。
+6.返给用户层。
+
+用户的上下文到底存在哪里: 该程序的内核栈中。
+是不是可以这样理解：除了正在用户态运行的程序，
+其他的进程都是处在内核的空间内，且内核栈上有自己的上下文。
+
+golang的goroutie我理解状态是存储在本身的栈上，切换时确实时用的g0栈。
+
+用户态调用某一个func:
+function(para1) {
+   准备好系统调用的参数
+   保留现场(各种入栈)
+   执行内核的systemcall
+   解析内核的返回值，如果需要的话。
+   恢复现场
+   调用调度程序。（有可能继续执行该程序，也有可能不再执行）
+}
+
+</code></pre>
+
+<h3 id="4-进程调度">4.进程调度</h3>
+
+<p>概念1：程序链接与地址分布<br />
+形同内核的形式，本质上就是一个定义/协议。ELF。</p>
+
+<p>概念2：进程加载与创建。<br />
+硬盘上的代码与内核中的进程数据结构的区别。</p>
+
+<pre><code>解析elf文件：
+进程管理数据结构：task_struct.
+地址空间管理数据结构 mm_struct.
+初始化用户态栈空间。-&gt; 创建一段合法的虚拟地址空间(4KB)+页表注册。
+根据程序中每一个程序段，初始化mm_struct。
+准备启动的数据结构。
+注册到内核进程表。
+</code></pre>
+
+<p>概念3：进程退出<br />
+从内核中创建，从内核中消亡。</p>
+
+<p>概念4：进程切换<br />
+重要是两个部分：地址空间切换与栈的切换。</p>
+
+<pre><code>不同程序内核的地址空间是相同的，所以放心的切用户态cr3页目录表。
+TLB中非全局项被刷新。   
+</code></pre>
+
+<p>概念5：休眠与唤醒</p>
+
+<p>从执行队列中将这个进程拿出来，就是休眠。放回去就是唤醒。</p>
+
+<pre><code>依赖数据本身做传递。
+1.比如等待某信号为空，让它休眠。之后把信号置位，再让它恢复，它得类似for循环这种。
+2.类似函数调用一样。调用了某个函数，需要一个返回值位置，执行的下一条语句地址。把返回值放回去，继续执行就好了。
+</code></pre>
+
+<h3 id="5-物理内存管理">5.物理内存管理</h3>
+
+<p>buddy算法与slab算法。</p>
+
+<h3 id="6-虚拟内存管理">6.虚拟内存管理</h3>
+
+<p>概念1：虚拟内存是在做什么?</p>
+
+<pre><code>内存映射 (mmap)
+堆管理 (heap)
+栈管理 (stack)
+按需分配内存 (pagefault)
+地址空间保护(#PF/#GP)
+页交换 (swapping)
+页缓存 (paging)
+</code></pre>
+
+<p>概念2： 文件映射与匿名映射</p>
+
+<p>文件映射：磁盘文件&ndash;pagecache &ndash;进程地址空间
+匿名映射：page frame&ndash;进程地址空间。</p>
+
+<p>概念3： TLB<br />
+转换旁视缓冲。(Translate Lookaside Buffer)</p>
+
+			</div>
+		</div>
+		
+  </body>
+</html>
